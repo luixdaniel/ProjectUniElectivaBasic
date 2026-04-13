@@ -6,24 +6,30 @@ from fastapi.encoders import jsonable_encoder
 
 class UserController:
         
-    def create_user(self, user: User):   
+    def create_user(self, user: User):
+        conn = None
+        cursor = None
         try:
             conn = get_db_connection()
             cursor = conn.cursor()
             cursor.execute("INSERT INTO usuarios (nombre,apellido,cedula,edad,usuario,contrasena) VALUES (%s, %s, %s, %s, %s ,%s)", (user.nombre, user.apellido, user.cedula, user.edad, user.usuario, user.contrasena))
             conn.commit()
-            conn.close()
             return {"resultado": "Usuario creado"}
         except psycopg2.Error as err:
             print(err)
-            # Si falla el INSERT, los datos no quedan guardados parcialmente en la base de datos
-            # Se usa para deshacer los cambios de la transacción activa cuando ocurre un error en el try.
-            conn.rollback()
+            if conn:
+                conn.rollback()
+            raise HTTPException(status_code=500, detail="Error de base de datos al crear usuario")
         finally:
-            conn.close()
+            if cursor:
+                cursor.close()
+            if conn:
+                conn.close()
         
 
     def get_user(self, user_id: int):
+        conn = None
+        cursor = None
         try:
             conn = get_db_connection()
             cursor = conn.cursor()
@@ -54,13 +60,18 @@ class UserController:
                 
         except psycopg2.Error as err:
             print(err)
-            # Se usa para deshacer los cambios de la transacción activa cuando ocurre un error en el try.
-            ##Maneja el estado de la transacción en la base de datos.Si un INSERT, UPDATE o DELETE falla dentro de una transacción, rollback() revierte esos cambios.
-            conn.rollback()
+            if conn:
+                conn.rollback()
+            raise HTTPException(status_code=500, detail="Error de base de datos al consultar usuario")
         finally:
-            conn.close()
+            if cursor:
+                cursor.close()
+            if conn:
+                conn.close()
        
     def get_users(self):
+        conn = None
+        cursor = None
         try:
             conn = get_db_connection()
             cursor = conn.cursor()
@@ -72,10 +83,11 @@ class UserController:
                 content={
                     'id':data[0],
                     'nombre':data[1],
-                    'cedula':data[2],
-                    'edad':data[3],
-                    'usuario':data[4],
-                    'contrasena':data[5]
+                    'apellido':data[2],
+                    'cedula':data[3],
+                    'edad':data[4],
+                    'usuario':data[5],
+                    'contrasena':data[6]
                 }
                 payload.append(content)
                 content = {}
@@ -87,9 +99,14 @@ class UserController:
                 
         except psycopg2.Error as err:
             print(err)
-            conn.rollback()
+            if conn:
+                conn.rollback()
+            raise HTTPException(status_code=500, detail="Error de base de datos al listar usuarios")
         finally:
-            conn.close()
+            if cursor:
+                cursor.close()
+            if conn:
+                conn.close()
     
     
        
