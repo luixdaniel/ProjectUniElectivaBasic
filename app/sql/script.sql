@@ -31,12 +31,19 @@ ALTER COLUMN correo SET NOT NULL;
 
 CREATE UNIQUE INDEX IF NOT EXISTS ux_usuarios_usuario ON usuarios(usuario);
 CREATE UNIQUE INDEX IF NOT EXISTS ux_usuarios_correo ON usuarios(correo);
+CREATE UNIQUE INDEX IF NOT EXISTS ux_usuarios_cedula ON usuarios(cedula);
 
 -- Registro de prueba opcional
 INSERT INTO usuarios (nombre, apellido, cedula, edad, usuario, correo, contrasena, rol)
 SELECT 'pedro', 'perez', '10102020', 30, 'pperez', 'pperez@correo.local', '12345', 'admin'
 WHERE NOT EXISTS (
     SELECT 1 FROM usuarios WHERE usuario = 'pperez'
+);
+
+INSERT INTO usuarios (nombre, apellido, cedula, edad, usuario, correo, contrasena, rol)
+SELECT 'admin', 'principal', '90000001', 35, 'admin', 'admin@pqrsapp.com', 'Admin123*', 'admin'
+WHERE NOT EXISTS (
+    SELECT 1 FROM usuarios WHERE usuario = 'admin' OR correo = 'admin@pqrsapp.com'
 );
 
 CREATE TABLE IF NOT EXISTS dependencias (
@@ -64,6 +71,14 @@ CREATE TABLE IF NOT EXISTS pqrs (
     fecha_creacion TIMESTAMP NOT NULL DEFAULT NOW(),
     fecha_actualizacion TIMESTAMP NOT NULL DEFAULT NOW()
 );
+
+ALTER TABLE pqrs
+ADD COLUMN IF NOT EXISTS responsable_id INTEGER REFERENCES usuarios(id);
+
+ALTER TABLE pqrs
+ADD COLUMN IF NOT EXISTS respuesta TEXT;
+
+CREATE INDEX IF NOT EXISTS ix_pqrs_responsable_id ON pqrs(responsable_id);
 
 CREATE TABLE IF NOT EXISTS pqrs_historial (
     id SERIAL PRIMARY KEY,

@@ -13,10 +13,19 @@ class AuthController:
         try:
             conn = get_db_connection()
             cursor = conn.cursor()
+            rol_registro = "usuario"
 
-            cursor.execute("SELECT id FROM usuarios WHERE usuario = %s OR correo = %s", (data.usuario, data.correo))
+            cursor.execute("SELECT 1 FROM usuarios WHERE usuario = %s", (data.usuario,))
             if cursor.fetchone():
-                raise HTTPException(status_code=400, detail="El usuario o correo ya existe")
+                raise HTTPException(status_code=400, detail="El nombre de usuario ya existe")
+
+            cursor.execute("SELECT 1 FROM usuarios WHERE correo = %s", (data.correo,))
+            if cursor.fetchone():
+                raise HTTPException(status_code=400, detail="El correo ya existe")
+
+            cursor.execute("SELECT 1 FROM usuarios WHERE cedula = %s", (data.cedula,))
+            if cursor.fetchone():
+                raise HTTPException(status_code=400, detail="El documento ya existe")
 
             password_hashed = hash_password(data.contrasena)
             cursor.execute(
@@ -33,7 +42,7 @@ class AuthController:
                     data.usuario,
                     data.correo,
                     password_hashed,
-                    data.rol,
+                    rol_registro,
                 ),
             )
             user = cursor.fetchone()

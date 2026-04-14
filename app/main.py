@@ -9,7 +9,9 @@ app = FastAPI()
 origins = [
     #"http://localhost.tiangolo.com",
     "https://ep-square-flower-aiq3n3y4-pooler.c-4.us-east-1.aws.neon.tech",
-    "http://localhost"
+    "http://localhost",
+    "http://localhost:3000",
+    "http://127.0.0.1:3000"
     #"http://localhost:8080",
 ]
 

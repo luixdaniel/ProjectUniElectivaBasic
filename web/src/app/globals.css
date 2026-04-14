@@ -1,0 +1,86 @@
+@import "tailwindcss";
+
+:root {
+  --bg: #f6f8fb;
+  --surface: #ffffff;
+  --ink: #142033;
+  --muted: #5c6b80;
+  --brand: #0d9488;
+  --brand-strong: #0f766e;
+  --accent: #f59e0b;
+  --danger: #b91c1c;
+}
+
+@theme inline {
+  --color-background: var(--bg);
+  --color-foreground: var(--ink);
+  --font-sans: var(--font-outfit);
+  --font-mono: var(--font-space-grotesk);
+}
+
+body {
+  background:
+    radial-gradient(circle at 10% 15%, #d8f4f1 0%, transparent 28%),
+    radial-gradient(circle at 85% 20%, #ffe6b8 0%, transparent 24%),
+    var(--bg);
+  color: var(--ink);
+}
+
+.app-shell {
+  width: min(1100px, 92%);
+  margin: 0 auto;
+}
+
+.card {
+  background: var(--surface);
+  border-radius: 18px;
+  box-shadow: 0 10px 35px rgba(16, 30, 54, 0.08);
+  border: 1px solid #e5ebf3;
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, var(--brand), var(--brand-strong));
+  color: #ffffff;
+  border: 0;
+  border-radius: 12px;
+  padding: 10px 16px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.btn-primary:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.btn-ghost {
+  border: 1px solid #d1d9e6;
+  border-radius: 12px;
+  padding: 10px 16px;
+  font-weight: 600;
+  color: var(--ink);
+  background: #ffffff;
+  cursor: pointer;
+}
+
+.input {
+  width: 100%;
+  border: 1px solid #cad4e3;
+  border-radius: 12px;
+  padding: 11px 12px;
+  outline: none;
+}
+
+.input:focus {
+  border-color: var(--brand);
+  box-shadow: 0 0 0 3px rgba(13, 148, 136, 0.14);
+}
+
+.error-text {
+  color: var(--danger);
+  font-size: 0.9rem;
+}
+
+.muted {
+  color: var(--muted);
+}
