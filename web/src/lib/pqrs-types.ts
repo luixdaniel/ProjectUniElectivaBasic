@@ -11,6 +11,7 @@ export type PqrsItem = {
   descripcion: string;
   respuesta?: string | null;
   fecha_creacion?: string;
+  fecha_actualizacion?: string;
   categoria?: { id: number; nombre: string };
   usuario?: { id: number; nombre: string; apellido: string; correo?: string };
 };

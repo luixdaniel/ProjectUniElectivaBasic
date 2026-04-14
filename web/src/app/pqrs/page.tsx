@@ -1,14 +1,26 @@
 "use client";
 
-import Link from "next/link";
+import { ColumnDef } from "@tanstack/react-table";
 import { useRouter } from "next/navigation";
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 
+import DashboardShell from "@/components/layout/DashboardShell";
+import ConfirmDialog from "@/components/ui/ConfirmDialog";
+import DataTableWrapper from "@/components/ui/DataTableWrapper";
+import EmptyState from "@/components/ui/EmptyState";
+import ExportButtons from "@/components/ui/ExportButtons";
+import FilterBar from "@/components/ui/FilterBar";
+import PriorityBadge from "@/components/ui/PriorityBadge";
+import SearchInput from "@/components/ui/SearchInput";
+import StatusBadge from "@/components/ui/StatusBadge";
 import PqrsBadges from "@/components/pqrs/PqrsBadges";
 import PqrsHistorial from "@/components/pqrs/PqrsHistorial";
+import PqrsTimeline from "@/components/pqrs/PqrsTimeline";
+import SlaBadge from "@/components/pqrs/SlaBadge";
 import { apiRequest } from "@/lib/api";
-import { AuthUser, clearSession, getToken, getUser } from "@/lib/auth";
+import { clearSession } from "@/lib/auth";
 import { HistorialItem, PqrsItem, PqrsPrioridad, PqrsTipo } from "@/lib/pqrs-types";
+import { useRoleGuard } from "@/lib/role-guard";
 
 type Categoria = { id: number; nombre: string };
 
@@ -19,8 +31,7 @@ type HistorialResponse = { resultado: HistorialItem[] };
 
 export default function UsuarioPqrsPage() {
   const router = useRouter();
-  const [token, setToken] = useState<string | null>(null);
-  const [user, setUser] = useState<AuthUser | null>(null);
+  const { user, token, ready } = useRoleGuard(["usuario"], "/dashboard");
 
   const [misPqrs, setMisPqrs] = useState<PqrsItem[]>([]);
   const [categorias, setCategorias] = useState<Categoria[]>([]);
@@ -31,33 +42,22 @@ export default function UsuarioPqrsPage() {
   const [categoriaId, setCategoriaId] = useState<number>(0);
   const [descripcion, setDescripcion] = useState("");
   const [prioridad, setPrioridad] = useState<PqrsPrioridad>("media");
+  const [showCreateForm, setShowCreateForm] = useState(false);
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [deletingId, setDeletingId] = useState<number | null>(null);
+  const [toDelete, setToDelete] = useState<PqrsItem | null>(null);
+  const [search, setSearch] = useState("");
+  const [estadoFilter, setEstadoFilter] = useState("todos");
+  const [prioridadFilter, setPrioridadFilter] = useState("todas");
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
-  const dashboardHref = user?.rol === "admin" ? "/dashboard/admin" : user?.rol === "responsable" ? "/dashboard/responsable" : "/dashboard/usuario";
+  const dashboardHref = "/dashboard/usuario";
 
   useEffect(() => {
-    const currentToken = getToken();
-    const currentUser = getUser();
-
-    if (!currentToken || !currentUser) {
-      router.replace("/login");
-      return;
-    }
-
-    const timer = window.setTimeout(() => {
-      setToken(currentToken);
-      setUser(currentUser);
-    }, 0);
-
-    return () => window.clearTimeout(timer);
-  }, [router]);
-
-  useEffect(() => {
-    if (!token || !user) return;
+    if (!token || !user || !ready) return;
 
     async function loadData() {
       setLoading(true);
@@ -84,7 +84,7 @@ export default function UsuarioPqrsPage() {
     }
 
     loadData();
-  }, [token, user, categoriaId]);
+  }, [token, user, categoriaId, ready]);
 
   async function reloadMisPqrs() {
     if (!token) return;
@@ -92,7 +92,7 @@ export default function UsuarioPqrsPage() {
     setMisPqrs(data.resultado ?? []);
   }
 
-  async function loadDetalle(id: number) {
+  const loadDetalle = useCallback(async (id: number) => {
     if (!token) return;
     setError("");
     try {
@@ -106,7 +106,7 @@ export default function UsuarioPqrsPage() {
       const message = err instanceof Error ? err.message : "No se pudo cargar detalle";
       setError(message);
     }
-  }
+  }, [token]);
 
   async function onCreatePqrs(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -135,6 +135,7 @@ export default function UsuarioPqrsPage() {
       setDescripcion("");
       setPrioridad("media");
       setSuccess("PQRS creada correctamente");
+      setShowCreateForm(false);
       await reloadMisPqrs();
     } catch (err) {
       const message = err instanceof Error ? err.message : "No se pudo crear PQRS";
@@ -144,120 +145,273 @@ export default function UsuarioPqrsPage() {
     }
   }
 
+  async function onDeletePqrs(item: PqrsItem) {
+    if (!token) return;
+
+    if (!["radicada", "en_revision"].includes(item.estado)) {
+      setError("Solo puedes eliminar PQRS en estado radicada o en_revision");
+      return;
+    }
+
+    setDeletingId(item.id);
+    setError("");
+    setSuccess("");
+    try {
+      await apiRequest<{ resultado: string }>(`/pqrs/${item.id}`, {
+        method: "DELETE",
+        token,
+      });
+
+      if (selected?.id === item.id) {
+        setSelected(null);
+        setHistorial([]);
+      }
+
+      setSuccess("PQRS eliminada correctamente");
+      await reloadMisPqrs();
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "No se pudo eliminar la PQRS";
+      setError(message);
+    } finally {
+      setDeletingId(null);
+      setToDelete(null);
+    }
+  }
+
+  const filteredRows = useMemo(() => {
+    return misPqrs.filter((item) => {
+      const bySearch =
+        item.numero_radicado.toLowerCase().includes(search.toLowerCase()) ||
+        item.descripcion.toLowerCase().includes(search.toLowerCase());
+      const byEstado = estadoFilter === "todos" || item.estado === estadoFilter;
+      const byPrioridad = prioridadFilter === "todas" || item.prioridad === prioridadFilter;
+      return bySearch && byEstado && byPrioridad;
+    });
+  }, [misPqrs, prioridadFilter, search, estadoFilter]);
+
+  const columns = useMemo<ColumnDef<PqrsItem>[]>(
+    () => [
+      {
+        header: "Radicado",
+        accessorKey: "numero_radicado",
+        cell: ({ row }) => <span className="font-semibold">{row.original.numero_radicado}</span>,
+      },
+      {
+        header: "Tipo",
+        accessorKey: "tipo",
+      },
+      {
+        header: "Estado",
+        accessorKey: "estado",
+        cell: ({ row }) => <StatusBadge status={row.original.estado} />,
+      },
+      {
+        header: "Prioridad",
+        accessorKey: "prioridad",
+        cell: ({ row }) => <PriorityBadge priority={row.original.prioridad} />,
+      },
+      {
+        header: "SLA",
+        id: "sla",
+        cell: ({ row }) => <SlaBadge estado={row.original.estado} fechaCreacion={row.original.fecha_creacion} />,
+      },
+      {
+        header: "Acciones",
+        id: "acciones",
+        enableSorting: false,
+        cell: ({ row }) => {
+          const item = row.original;
+          const canDelete = ["radicada", "en_revision"].includes(item.estado);
+          return (
+            <div className="flex flex-wrap gap-2">
+              <button className="btn-ghost" onClick={() => loadDetalle(item.id)}>
+                Ver
+              </button>
+              <button
+                className="btn-ghost"
+                onClick={() => setToDelete(item)}
+                disabled={!canDelete || deletingId === item.id}
+              >
+                {deletingId === item.id ? "Eliminando..." : "Eliminar"}
+              </button>
+            </div>
+          );
+        },
+      },
+    ],
+    [deletingId, loadDetalle]
+  );
+
   function handleLogout() {
     clearSession();
     router.replace("/");
   }
 
-  return (
-    <main className="py-10">
-      <section className="app-shell">
-        <header className="card flex flex-wrap items-center justify-between gap-4 p-6">
-          <div>
-            <p className="text-sm uppercase tracking-[0.2em] text-teal-700">Modulo Usuario</p>
-            <h1 className="text-2xl font-bold">Mis PQRS</h1>
-            {user ? (
-              <p className="muted mt-1 text-sm">
-                {user.nombre} {user.apellido} | {user.correo}
-              </p>
-            ) : null}
-          </div>
-
-          <div className="flex gap-2">
-            <Link href={dashboardHref} className="btn-ghost">
-              Dashboard
-            </Link>
-            {(user?.rol === "responsable" || user?.rol === "admin") && (
-              <Link href="/responsable" className="btn-ghost">
-                Bandeja responsable
-              </Link>
-            )}
-            <button className="btn-primary" onClick={handleLogout}>
-              Cerrar sesion
-            </button>
-          </div>
-        </header>
-
-        <section className="card mt-6 p-6">
-          <h2 className="text-xl font-semibold">Crear PQRS</h2>
-          <p className="muted mt-1 text-sm">Radica peticion, queja, reclamo o sugerencia.</p>
-
-          <form className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2" onSubmit={onCreatePqrs}>
-            <div>
-              <label className="mb-1 block text-sm font-medium">Tipo</label>
-              <select className="input" value={tipo} onChange={(e) => setTipo(e.target.value as PqrsTipo)}>
-                <option value="P">P</option>
-                <option value="Q">Q</option>
-                <option value="R">R</option>
-                <option value="S">S</option>
-              </select>
-            </div>
-
-            <div>
-              <label className="mb-1 block text-sm font-medium">Categoria</label>
-              <select className="input" value={categoriaId || ""} onChange={(e) => setCategoriaId(Number(e.target.value))}>
-                {categorias.map((categoria) => (
-                  <option key={categoria.id} value={categoria.id}>
-                    {categoria.nombre}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label className="mb-1 block text-sm font-medium">Prioridad</label>
-              <select className="input" value={prioridad} onChange={(e) => setPrioridad(e.target.value as PqrsPrioridad)}>
-                <option value="baja">baja</option>
-                <option value="media">media</option>
-                <option value="alta">alta</option>
-              </select>
-            </div>
-
-            <div className="md:col-span-2">
-              <label className="mb-1 block text-sm font-medium">Descripcion</label>
-              <textarea className="input min-h-24" value={descripcion} onChange={(e) => setDescripcion(e.target.value)} required />
-            </div>
-
-            <button className="btn-primary md:col-span-2" type="submit" disabled={saving || loading}>
-              {saving ? "Guardando..." : "Crear PQRS"}
-            </button>
-          </form>
+  if (!ready) {
+    return (
+      <main className="py-10">
+        <section className="app-shell card p-6">
+          <p className="muted">Validando permisos...</p>
         </section>
+      </main>
+    );
+  }
 
-        <section className="card mt-6 p-6">
+  return (
+    <DashboardShell
+      roleLabel="Dashboard Usuario"
+      title="Mis PQRS"
+      subtitle={user ? `${user.nombre} ${user.apellido} | ${user.correo}` : ""}
+      links={[
+        { href: dashboardHref, label: "Inicio usuario" },
+        { href: "/pqrs", label: "Mis PQRS" },
+        { href: "/", label: "Home" },
+      ]}
+      onLogout={handleLogout}
+    >
+      <section className="card p-6">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h2 className="text-xl font-semibold">Crear PQRS</h2>
+              <p className="muted mt-1 text-sm">Radica peticion, queja, reclamo o sugerencia.</p>
+            </div>
+            <button
+              className="btn-primary"
+              type="button"
+              onClick={() => setShowCreateForm((prev) => !prev)}
+            >
+              {showCreateForm ? "Ocultar formulario" : "Crear PQRS"}
+            </button>
+          </div>
+
+          {showCreateForm ? (
+            <form className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2" onSubmit={onCreatePqrs}>
+              <div>
+                <label className="mb-1 block text-sm font-medium">Tipo</label>
+                <select className="input" value={tipo} onChange={(e) => setTipo(e.target.value as PqrsTipo)}>
+                  <option value="P">P</option>
+                  <option value="Q">Q</option>
+                  <option value="R">R</option>
+                  <option value="S">S</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="mb-1 block text-sm font-medium">Categoria</label>
+                <select className="input" value={categoriaId || ""} onChange={(e) => setCategoriaId(Number(e.target.value))}>
+                  {categorias.map((categoria) => (
+                    <option key={categoria.id} value={categoria.id}>
+                      {categoria.nombre}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="mb-1 block text-sm font-medium">Prioridad</label>
+                <select className="input" value={prioridad} onChange={(e) => setPrioridad(e.target.value as PqrsPrioridad)}>
+                  <option value="baja">baja</option>
+                  <option value="media">media</option>
+                  <option value="alta">alta</option>
+                </select>
+              </div>
+
+              <div className="md:col-span-2">
+                <label className="mb-1 block text-sm font-medium">Descripcion</label>
+                <textarea className="input min-h-24" value={descripcion} onChange={(e) => setDescripcion(e.target.value)} required />
+              </div>
+
+              <div className="md:col-span-2 flex flex-wrap gap-2">
+                <button className="btn-primary" type="submit" disabled={saving || loading}>
+                  {saving ? "Guardando..." : "Guardar PQRS"}
+                </button>
+                <button className="btn-ghost" type="button" onClick={() => setShowCreateForm(false)}>
+                  Cancelar
+                </button>
+              </div>
+            </form>
+          ) : null}
+      </section>
+
+      <section className="card p-6">
           <h2 className="text-xl font-semibold">Listado</h2>
           {loading ? <p className="muted mt-3">Cargando...</p> : null}
           {error ? <p className="error-text mt-3">{error}</p> : null}
           {success ? <p className="mt-3 rounded-md bg-emerald-100 px-3 py-2 text-sm text-emerald-800">{success}</p> : null}
 
-          {!loading && misPqrs.length === 0 ? <p className="muted mt-3">Aun no tienes PQRS.</p> : null}
+          <FilterBar>
+            <SearchInput value={search} onChange={setSearch} placeholder="Buscar por radicado o descripcion" />
+            <select className="input" value={estadoFilter} onChange={(event) => setEstadoFilter(event.target.value)}>
+              <option value="todos">Todos los estados</option>
+              <option value="radicada">radicada</option>
+              <option value="en_revision">en_revision</option>
+              <option value="en_gestion">en_gestion</option>
+              <option value="respondida">respondida</option>
+              <option value="cerrada">cerrada</option>
+              <option value="rechazada">rechazada</option>
+            </select>
+            <select className="input" value={prioridadFilter} onChange={(event) => setPrioridadFilter(event.target.value)}>
+              <option value="todas">Todas las prioridades</option>
+              <option value="baja">baja</option>
+              <option value="media">media</option>
+              <option value="alta">alta</option>
+            </select>
+            <ExportButtons
+              fileName="mis-pqrs"
+              rows={filteredRows.map((item) => ({
+                radicado: item.numero_radicado,
+                estado: item.estado,
+                prioridad: item.prioridad,
+                tipo: item.tipo,
+              }))}
+              columns={[
+                { key: "radicado", label: "Radicado" },
+                { key: "estado", label: "Estado" },
+                { key: "prioridad", label: "Prioridad" },
+                { key: "tipo", label: "Tipo" },
+              ]}
+            />
+          </FilterBar>
 
-          <div className="mt-4 space-y-3">
-            {misPqrs.map((item) => (
-              <article key={item.id} className="rounded-xl border border-slate-200 bg-slate-50 p-4">
-                <PqrsBadges tipo={item.tipo} prioridad={item.prioridad} estado={item.estado} />
-                <p className="mt-2 font-semibold">{item.numero_radicado}</p>
-                <p className="muted mt-1 text-sm line-clamp-2">{item.descripcion}</p>
-                <button className="btn-ghost mt-3" onClick={() => loadDetalle(item.id)}>
-                  Ver detalle
-                </button>
-              </article>
-            ))}
-          </div>
-        </section>
+          {!loading && filteredRows.length === 0 ? (
+            <div className="mt-4">
+              <EmptyState title="Sin resultados" subtitle="Ajusta filtros o crea una nueva PQRS." />
+            </div>
+          ) : (
+            <div className="mt-4">
+              <DataTableWrapper data={filteredRows} columns={columns} title="Mis PQRS" searchPlaceholder="Buscar en la tabla" />
+            </div>
+          )}
+      </section>
 
-        {selected && (
-          <section className="card mt-6 p-6">
+      {selected && (
+        <section className="card p-6">
             <h2 className="text-xl font-semibold">Detalle</h2>
+            <div className="mt-2 flex flex-wrap gap-2">
+              <PqrsBadges tipo={selected.tipo} prioridad={selected.prioridad} estado={selected.estado} />
+              <SlaBadge estado={selected.estado} fechaCreacion={selected.fecha_creacion} />
+            </div>
             <p className="mt-1 text-sm font-medium">{selected.numero_radicado}</p>
             <p className="muted mt-1 text-sm">{selected.descripcion}</p>
             <p className="muted mt-1 text-sm">Categoria: {selected.categoria?.nombre ?? "Sin categoria"}</p>
             <p className="muted mt-1 text-sm">Estado: {selected.estado}</p>
+            <PqrsTimeline estadoActual={selected.estado} />
             {selected.respuesta ? <p className="mt-2 rounded-md bg-sky-100 px-3 py-2 text-sm text-sky-900">Respuesta: {selected.respuesta}</p> : null}
             <PqrsHistorial items={historial} />
-          </section>
-        )}
-      </section>
-    </main>
+        </section>
+      )}
+
+      <ConfirmDialog
+        open={!!toDelete}
+        title="Eliminar PQRS"
+        message={toDelete ? `Esta accion eliminara la PQRS ${toDelete.numero_radicado}.` : ""}
+        confirmText="Eliminar"
+        loading={deletingId !== null}
+        onCancel={() => setToDelete(null)}
+        onConfirm={() => {
+          if (toDelete) void onDeletePqrs(toDelete);
+        }}
+      />
+    </DashboardShell>
   );
 }

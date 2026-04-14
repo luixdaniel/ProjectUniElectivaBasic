@@ -85,7 +85,7 @@ class UserController:
         try:
             conn = get_db_connection()
             cursor = conn.cursor()
-            cursor.execute("SELECT id, nombre, apellido, cedula, edad, usuario, correo, contrasena, rol FROM usuarios")
+            cursor.execute("SELECT id, nombre, apellido, cedula, edad, usuario, correo, rol FROM usuarios")
             result = cursor.fetchall()
             payload = []
             content = {} 
@@ -98,8 +98,7 @@ class UserController:
                     'edad':data[4],
                     'usuario':data[5],
                     'correo':data[6],
-                    'contrasena':data[7],
-                    'rol':data[8]
+                    'rol':data[7]
                 }
                 payload.append(content)
                 content = {}
@@ -114,6 +113,69 @@ class UserController:
             if conn:
                 conn.rollback()
             raise HTTPException(status_code=500, detail="Error de base de datos al listar usuarios")
+        finally:
+            if cursor:
+                cursor.close()
+            if conn:
+                conn.close()
+
+    def set_responsable_status(self, user_id: int, activo: bool):
+        conn = None
+        cursor = None
+        try:
+            conn = get_db_connection()
+            cursor = conn.cursor()
+
+            cursor.execute("SELECT id, rol, usuario FROM usuarios WHERE id = %s", (user_id,))
+            row = cursor.fetchone()
+            if not row:
+                raise HTTPException(status_code=404, detail="Usuario no encontrado")
+
+            current_role = row[1]
+            username = row[2]
+
+            if current_role == "admin" or username == "admin":
+                raise HTTPException(status_code=400, detail="No se puede modificar el usuario admin")
+
+            next_role = "responsable" if activo else "usuario"
+            cursor.execute("UPDATE usuarios SET rol = %s WHERE id = %s", (next_role, user_id))
+            conn.commit()
+            return {"resultado": f"Rol actualizado a {next_role}"}
+        except psycopg2.Error as err:
+            print(err)
+            if conn:
+                conn.rollback()
+            raise HTTPException(status_code=500, detail="Error de base de datos al actualizar rol")
+        finally:
+            if cursor:
+                cursor.close()
+            if conn:
+                conn.close()
+
+    def reset_user_password(self, user_id: int, nueva_contrasena: str):
+        conn = None
+        cursor = None
+        try:
+            conn = get_db_connection()
+            cursor = conn.cursor()
+
+            if len(nueva_contrasena or "") < 6:
+                raise HTTPException(status_code=400, detail="La nueva contraseña debe tener al menos 6 caracteres")
+
+            cursor.execute("SELECT id FROM usuarios WHERE id = %s", (user_id,))
+            row = cursor.fetchone()
+            if not row:
+                raise HTTPException(status_code=404, detail="Usuario no encontrado")
+
+            password_hashed = hash_password(nueva_contrasena)
+            cursor.execute("UPDATE usuarios SET contrasena = %s WHERE id = %s", (password_hashed, user_id))
+            conn.commit()
+            return {"resultado": "Contraseña restablecida correctamente"}
+        except psycopg2.Error as err:
+            print(err)
+            if conn:
+                conn.rollback()
+            raise HTTPException(status_code=500, detail="Error de base de datos al restablecer contraseña")
         finally:
             if cursor:
                 cursor.close()

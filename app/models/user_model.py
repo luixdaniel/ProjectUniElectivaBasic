@@ -10,3 +10,11 @@ class User(BaseModel):
     correo: EmailStr
     contrasena: str
     rol: str = "usuario"
+
+
+class UserRoleToggle(BaseModel):
+    activo: bool
+
+
+class UserPasswordReset(BaseModel):
+    nueva_contrasena: str

@@ -466,3 +466,44 @@ class PqrsController:
                 cursor.close()
             if conn:
                 conn.close()
+
+    def delete_pqrs(self, pqrs_id: int, user: dict):
+        conn = None
+        cursor = None
+        try:
+            conn = get_db_connection()
+            cursor = conn.cursor()
+
+            cursor.execute(
+                "SELECT usuario_id, estado FROM pqrs WHERE id = %s",
+                (pqrs_id,),
+            )
+            row = cursor.fetchone()
+            if not row:
+                raise HTTPException(status_code=404, detail="PQRS no encontrada")
+
+            usuario_id, estado = row
+            if user["rol"] == "usuario":
+                if user["id"] != usuario_id:
+                    raise HTTPException(status_code=403, detail="No tienes permisos para eliminar esta PQRS")
+                if estado not in ("radicada", "en_revision"):
+                    raise HTTPException(
+                        status_code=400,
+                        detail="Solo puedes eliminar PQRS en estado radicada o en_revision",
+                    )
+            elif user["rol"] != "admin":
+                raise HTTPException(status_code=403, detail="No tienes permisos para eliminar esta PQRS")
+
+            cursor.execute("DELETE FROM pqrs WHERE id = %s", (pqrs_id,))
+            conn.commit()
+            return {"resultado": "PQRS eliminada correctamente"}
+        except psycopg2.Error as err:
+            print(err)
+            if conn:
+                conn.rollback()
+            raise HTTPException(status_code=500, detail="Error de base de datos al eliminar PQRS")
+        finally:
+            if cursor:
+                cursor.close()
+            if conn:
+                conn.close()

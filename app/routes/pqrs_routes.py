@@ -43,3 +43,8 @@ async def get_pqrs_historial(pqrs_id: int, user=Depends(require_roles(["usuario"
 @router.patch("/{pqrs_id}/estado")
 async def update_estado(pqrs_id: int, data: PqrsEstadoUpdate, user=Depends(require_roles(["responsable", "admin"]))):
     return pqrs_controller.update_estado(pqrs_id, data, user)
+
+
+@router.delete("/{pqrs_id}")
+async def delete_pqrs(pqrs_id: int, user=Depends(require_roles(["usuario", "admin"]))):
+    return pqrs_controller.delete_pqrs(pqrs_id, user)

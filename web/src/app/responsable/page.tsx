@@ -1,9 +1,17 @@
 "use client";
 
-import Link from "next/link";
+import { ColumnDef } from "@tanstack/react-table";
 import { useRouter } from "next/navigation";
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 
+import DashboardShell from "@/components/layout/DashboardShell";
+import DataTableWrapper from "@/components/ui/DataTableWrapper";
+import EmptyState from "@/components/ui/EmptyState";
+import ExportButtons from "@/components/ui/ExportButtons";
+import FilterBar from "@/components/ui/FilterBar";
+import PriorityBadge from "@/components/ui/PriorityBadge";
+import SearchInput from "@/components/ui/SearchInput";
+import StatusBadge from "@/components/ui/StatusBadge";
 import PqrsBadges from "@/components/pqrs/PqrsBadges";
 import PqrsHistorial from "@/components/pqrs/PqrsHistorial";
 import { apiRequest } from "@/lib/api";
@@ -34,6 +42,9 @@ export default function ResponsablePage() {
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [search, setSearch] = useState("");
+  const [estadoFilter, setEstadoFilter] = useState("todos");
+  const [prioridadFilter, setPrioridadFilter] = useState("todas");
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
@@ -74,7 +85,7 @@ export default function ResponsablePage() {
     setAsignadas(data.resultado ?? []);
   }
 
-  async function loadDetalle(id: number) {
+  const loadDetalle = useCallback(async (id: number) => {
     if (!token) return;
     setError("");
     try {
@@ -91,7 +102,7 @@ export default function ResponsablePage() {
       const message = err instanceof Error ? err.message : "No se pudo cargar detalle";
       setError(message);
     }
-  }
+  }, [token]);
 
   async function onUpdate(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -125,6 +136,60 @@ export default function ResponsablePage() {
     router.replace("/");
   }
 
+  const filteredRows = useMemo(() => {
+    return asignadas.filter((item) => {
+      const bySearch =
+        item.numero_radicado.toLowerCase().includes(search.toLowerCase()) ||
+        item.usuario.nombre.toLowerCase().includes(search.toLowerCase()) ||
+        item.usuario.apellido.toLowerCase().includes(search.toLowerCase()) ||
+        item.categoria.nombre.toLowerCase().includes(search.toLowerCase());
+      const byEstado = estadoFilter === "todos" || item.estado === estadoFilter;
+      const byPrioridad = prioridadFilter === "todas" || item.prioridad === prioridadFilter;
+      return bySearch && byEstado && byPrioridad;
+    });
+  }, [asignadas, estadoFilter, prioridadFilter, search]);
+
+  const columns = useMemo<ColumnDef<ResponsablePqrsItem>[]>(
+    () => [
+      {
+        header: "Radicado",
+        accessorKey: "numero_radicado",
+        cell: ({ row }) => <span className="font-semibold">{row.original.numero_radicado}</span>,
+      },
+      {
+        header: "Solicitante",
+        id: "solicitante",
+        cell: ({ row }) => `${row.original.usuario.nombre} ${row.original.usuario.apellido}`,
+      },
+      {
+        header: "Categoria",
+        id: "categoria",
+        cell: ({ row }) => row.original.categoria.nombre,
+      },
+      {
+        header: "Estado",
+        accessorKey: "estado",
+        cell: ({ row }) => <StatusBadge status={row.original.estado} />,
+      },
+      {
+        header: "Prioridad",
+        accessorKey: "prioridad",
+        cell: ({ row }) => <PriorityBadge priority={row.original.prioridad} />,
+      },
+      {
+        header: "Accion",
+        id: "accion",
+        enableSorting: false,
+        cell: ({ row }) => (
+          <button className="btn-ghost" onClick={() => loadDetalle(row.original.id)}>
+            Gestionar
+          </button>
+        ),
+      },
+    ],
+    [loadDetalle]
+  );
+
   if (!ready) {
     return (
       <main className="py-10">
@@ -136,58 +201,77 @@ export default function ResponsablePage() {
   }
 
   return (
-    <main className="py-10">
-      <section className="app-shell">
-        <header className="card flex flex-wrap items-center justify-between gap-4 p-6">
-          <div>
-            <p className="text-sm uppercase tracking-[0.2em] text-teal-700">Modulo Responsable</p>
-            <h1 className="text-2xl font-bold">Bandeja de gestion</h1>
-            {user ? (
-              <p className="muted mt-1 text-sm">
-                {user.nombre} {user.apellido} | rol: {user.rol}
-              </p>
-            ) : null}
-          </div>
-
-          <div className="flex gap-2">
-            <Link href={dashboardHref} className="btn-ghost">
-              Dashboard
-            </Link>
-            <Link href="/pqrs" className="btn-ghost">
-              Mis PQRS
-            </Link>
-            <button className="btn-primary" onClick={handleLogout}>
-              Cerrar sesion
-            </button>
-          </div>
-        </header>
-
-        <section className="card mt-6 p-6">
+    <DashboardShell
+      roleLabel="Dashboard Responsable"
+      title="Bandeja de gestion"
+      subtitle={user ? `${user.nombre} ${user.apellido} | rol: ${user.rol}` : ""}
+      links={[
+        { href: dashboardHref, label: "Inicio responsable" },
+        { href: "/responsable", label: "PQRS asignadas" },
+        { href: "/", label: "Home" },
+      ]}
+      onLogout={handleLogout}
+    >
+      <section className="card p-6">
           <h2 className="text-xl font-semibold">Asignadas</h2>
 
           {loading ? <p className="muted mt-3">Cargando...</p> : null}
           {error ? <p className="error-text mt-3">{error}</p> : null}
           {success ? <p className="mt-3 rounded-md bg-emerald-100 px-3 py-2 text-sm text-emerald-800">{success}</p> : null}
-          {!loading && asignadas.length === 0 ? <p className="muted mt-3">No tienes PQRS asignadas.</p> : null}
 
-          <div className="mt-4 space-y-3">
-            {asignadas.map((item) => (
-              <article key={item.id} className="rounded-xl border border-slate-200 bg-slate-50 p-4">
-                <PqrsBadges tipo={item.tipo as PqrsTipo} prioridad={item.prioridad as PqrsPrioridad} estado={item.estado} />
-                <p className="mt-2 font-semibold">{item.numero_radicado}</p>
-                <p className="muted mt-1 text-sm">{item.usuario.nombre} {item.usuario.apellido} | {item.categoria.nombre}</p>
-                <p className="muted mt-1 text-sm line-clamp-2">{item.descripcion}</p>
-                <button className="btn-ghost mt-3" onClick={() => loadDetalle(item.id)}>
-                  Gestionar
-                </button>
-              </article>
-            ))}
-          </div>
-        </section>
+          <FilterBar>
+            <SearchInput value={search} onChange={setSearch} placeholder="Buscar por radicado, solicitante o categoria" />
+            <select className="input" value={estadoFilter} onChange={(event) => setEstadoFilter(event.target.value)}>
+              <option value="todos">Todos los estados</option>
+              <option value="radicada">radicada</option>
+              <option value="en_revision">en_revision</option>
+              <option value="en_gestion">en_gestion</option>
+              <option value="respondida">respondida</option>
+              <option value="cerrada">cerrada</option>
+              <option value="rechazada">rechazada</option>
+            </select>
+            <select className="input" value={prioridadFilter} onChange={(event) => setPrioridadFilter(event.target.value)}>
+              <option value="todas">Todas las prioridades</option>
+              <option value="baja">baja</option>
+              <option value="media">media</option>
+              <option value="alta">alta</option>
+            </select>
+            <ExportButtons
+              fileName="pqrs-asignadas"
+              rows={filteredRows.map((item) => ({
+                radicado: item.numero_radicado,
+                solicitante: `${item.usuario.nombre} ${item.usuario.apellido}`,
+                categoria: item.categoria.nombre,
+                estado: item.estado,
+                prioridad: item.prioridad,
+              }))}
+              columns={[
+                { key: "radicado", label: "Radicado" },
+                { key: "solicitante", label: "Solicitante" },
+                { key: "categoria", label: "Categoria" },
+                { key: "estado", label: "Estado" },
+                { key: "prioridad", label: "Prioridad" },
+              ]}
+            />
+          </FilterBar>
 
-        {selected && (
-          <section className="card mt-6 p-6">
+          {!loading && filteredRows.length === 0 ? (
+            <div className="mt-4">
+              <EmptyState title="Sin PQRS asignadas" subtitle="No hay registros para los filtros seleccionados." />
+            </div>
+          ) : (
+            <div className="mt-4">
+              <DataTableWrapper data={filteredRows} columns={columns} title="Bandeja de gestion" searchPlaceholder="Buscar en tabla" />
+            </div>
+          )}
+      </section>
+
+      {selected && (
+        <section className="card p-6">
             <h2 className="text-xl font-semibold">Detalle y gestion</h2>
+            <div className="mt-2 flex flex-wrap gap-2">
+              <PqrsBadges tipo={selected.tipo as PqrsTipo} prioridad={selected.prioridad as PqrsPrioridad} estado={selected.estado} />
+            </div>
             <p className="mt-1 text-sm font-medium">{selected.numero_radicado}</p>
             <p className="muted mt-1 text-sm">{selected.descripcion}</p>
             <p className="muted mt-1 text-sm">Solicitante: {selected.usuario.nombre} {selected.usuario.apellido}</p>
@@ -221,9 +305,8 @@ export default function ResponsablePage() {
             </form>
 
             <PqrsHistorial items={historial} title="Historial" />
-          </section>
-        )}
-      </section>
-    </main>
+        </section>
+      )}
+    </DashboardShell>
   );
 }
