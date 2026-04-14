@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, EmailStr
 
 class User(BaseModel):
     id: int = None
@@ -7,4 +7,6 @@ class User(BaseModel):
     cedula: str
     edad: int
     usuario: str
+    correo: EmailStr
     contrasena: str
+    rol: str = "usuario"

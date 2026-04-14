@@ -1,6 +1,7 @@
 import psycopg2
 from fastapi import HTTPException
 from config.db_config import get_db_connection
+from config.security import hash_password
 from models.user_model import User
 from fastapi.encoders import jsonable_encoder
 
@@ -12,7 +13,11 @@ class UserController:
         try:
             conn = get_db_connection()
             cursor = conn.cursor()
-            cursor.execute("INSERT INTO usuarios (nombre,apellido,cedula,edad,usuario,contrasena) VALUES (%s, %s, %s, %s, %s ,%s)", (user.nombre, user.apellido, user.cedula, user.edad, user.usuario, user.contrasena))
+            password_hashed = hash_password(user.contrasena)
+            cursor.execute(
+                "INSERT INTO usuarios (nombre,apellido,cedula,edad,usuario,correo,contrasena,rol) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)",
+                (user.nombre, user.apellido, user.cedula, user.edad, user.usuario, user.correo, password_hashed, user.rol),
+            )
             conn.commit()
             return {"resultado": "Usuario creado"}
         except psycopg2.Error as err:
@@ -33,7 +38,10 @@ class UserController:
         try:
             conn = get_db_connection()
             cursor = conn.cursor()
-            cursor.execute("SELECT * FROM usuarios WHERE id = %s", (user_id,))
+            cursor.execute(
+                "SELECT id, nombre, apellido, cedula, edad, usuario, correo, contrasena, rol FROM usuarios WHERE id = %s",
+                (user_id,),
+            )
             result = cursor.fetchone()
             payload = []
             content = {} 
@@ -45,7 +53,9 @@ class UserController:
                     'cedula':result[3],
                     'edad':int(result[4]),
                     'usuario':result[5],
-                    'contrasena':result[6]
+                        'correo':result[6],
+                        'contrasena':result[7],
+                        'rol':result[8]
             }
             payload.append(content)
             
@@ -75,7 +85,7 @@ class UserController:
         try:
             conn = get_db_connection()
             cursor = conn.cursor()
-            cursor.execute("SELECT * FROM usuarios")
+            cursor.execute("SELECT id, nombre, apellido, cedula, edad, usuario, correo, contrasena, rol FROM usuarios")
             result = cursor.fetchall()
             payload = []
             content = {} 
@@ -87,7 +97,9 @@ class UserController:
                     'cedula':data[3],
                     'edad':data[4],
                     'usuario':data[5],
-                    'contrasena':data[6]
+                    'correo':data[6],
+                    'contrasena':data[7],
+                    'rol':data[8]
                 }
                 payload.append(content)
                 content = {}

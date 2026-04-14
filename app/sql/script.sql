@@ -8,12 +8,33 @@ CREATE TABLE IF NOT EXISTS usuarios (
     cedula VARCHAR(20) NOT NULL,
     edad INTEGER NOT NULL,
     usuario VARCHAR(20) NOT NULL,
-    contrasena VARCHAR(20) NOT NULL
+    correo VARCHAR(120) NOT NULL,
+    contrasena VARCHAR(255) NOT NULL,
+    rol VARCHAR(20) NOT NULL DEFAULT 'usuario'
 );
 
+ALTER TABLE usuarios
+ADD COLUMN IF NOT EXISTS rol VARCHAR(20) NOT NULL DEFAULT 'usuario';
+
+ALTER TABLE usuarios
+ADD COLUMN IF NOT EXISTS correo VARCHAR(120);
+
+ALTER TABLE usuarios
+ALTER COLUMN contrasena TYPE VARCHAR(255);
+
+UPDATE usuarios
+SET correo = usuario || '@correo.local'
+WHERE correo IS NULL;
+
+ALTER TABLE usuarios
+ALTER COLUMN correo SET NOT NULL;
+
+CREATE UNIQUE INDEX IF NOT EXISTS ux_usuarios_usuario ON usuarios(usuario);
+CREATE UNIQUE INDEX IF NOT EXISTS ux_usuarios_correo ON usuarios(correo);
+
 -- Registro de prueba opcional
-INSERT INTO usuarios (nombre, apellido, cedula, edad, usuario, contrasena)
-SELECT 'pedro', 'perez', '10102020', 30, 'pperez', '12345'
+INSERT INTO usuarios (nombre, apellido, cedula, edad, usuario, correo, contrasena, rol)
+SELECT 'pedro', 'perez', '10102020', 30, 'pperez', 'pperez@correo.local', '12345', 'admin'
 WHERE NOT EXISTS (
     SELECT 1 FROM usuarios WHERE usuario = 'pperez'
 );
