@@ -34,9 +34,9 @@ export default function AdminAnalyticsPage() {
       title="Analitica Power BI"
       subtitle={user ? `${user.nombre} ${user.apellido} | ${user.correo}` : ""}
       links={[
-        { href: "/dashboard/admin", label: "Inicio admin" },
-        { href: "/dashboard/admin/analytics", label: "Analitica" },
-        { href: "/", label: "Home" },
+        { href: "/dashboard/admin", label: "Control general", category: "DASHBOARD" },
+        { href: "/dashboard/admin/analytics", label: "Analítica detallada", category: "REPORTES" },
+        { href: "/", label: "Regresar al sitio", category: "SISTEMA" },
       ]}
       onLogout={handleLogout}
     >

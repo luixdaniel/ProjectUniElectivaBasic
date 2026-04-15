@@ -61,17 +61,17 @@ export default function DataTableWrapper<TData>({
         </div>
       </div>
 
-      <div className="overflow-x-auto rounded-xl border border-slate-200">
+      <div className="overflow-x-auto rounded-xl border border-[rgba(148,163,184,0.15)] bg-[#1e293b]">
         <table className="min-w-full border-collapse">
-          <thead className="bg-slate-100 text-left">
+          <thead className="bg-[#0f172a] text-left text-slate-300">
             {table.getHeaderGroups().map((headerGroup) => (
               <tr key={headerGroup.id}>
                 {headerGroup.headers.map((header) => (
-                  <th key={header.id} className="px-3 py-2 text-sm font-semibold text-slate-700">
+                  <th key={header.id} className="px-4 py-3 text-sm font-bold tracking-wide">
                     {header.isPlaceholder ? null : (
                       <button
                         type="button"
-                        className="inline-flex items-center gap-1"
+                        className="inline-flex items-center gap-1 font-bold outline-none"
                         onClick={header.column.getToggleSortingHandler()}
                       >
                         {flexRender(header.column.columnDef.header, header.getContext())}
@@ -87,9 +87,9 @@ export default function DataTableWrapper<TData>({
           </thead>
           <tbody>
             {table.getRowModel().rows.map((row) => (
-              <tr key={row.id} className="border-t border-slate-200">
+              <tr key={row.id} className="border-t border-[rgba(148,163,184,0.15)] hover:bg-[rgba(255,255,255,0.02)] transition-colors">
                 {row.getVisibleCells().map((cell) => (
-                  <td key={cell.id} className="px-3 py-2 text-sm text-slate-700 align-top">
+                  <td key={cell.id} className="px-4 py-3 text-sm text-slate-300 align-middle">
                     {flexRender(cell.column.columnDef.cell, cell.getContext())}
                   </td>
                 ))}
@@ -97,7 +97,7 @@ export default function DataTableWrapper<TData>({
             ))}
             {table.getRowModel().rows.length === 0 ? (
               <tr>
-                <td className="px-3 py-6 text-center text-sm text-slate-500" colSpan={columns.length}>
+                <td className="px-4 py-8 text-center text-sm text-slate-500" colSpan={columns.length}>
                   Sin resultados
                 </td>
               </tr>

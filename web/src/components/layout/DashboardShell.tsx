@@ -7,6 +7,7 @@ import { ReactNode } from "react";
 type SidebarLink = {
   href: string;
   label: string;
+  category?: string;
 };
 
 type DashboardShellProps = {
@@ -57,6 +58,16 @@ export default function DashboardShell({ roleLabel, title, subtitle, links, onLo
   const displayName = (subtitle?.split("|")[0] || title).trim();
   const avatarLetter = (displayName[0] || "U").toUpperCase();
 
+  const topLinks = links.filter((l) => !l.category);
+  const groups = links
+    .filter((l) => !!l.category)
+    .reduce((acc, link) => {
+      const cat = link.category as string;
+      if (!acc[cat]) acc[cat] = [];
+      acc[cat].push(link);
+      return acc;
+    }, {} as Record<string, SidebarLink[]>);
+
   return (
     <main className="dashboard-workspace">
       <section className="dashboard-grid-wide">
@@ -70,7 +81,8 @@ export default function DashboardShell({ roleLabel, title, subtitle, links, onLo
           </div>
 
           <nav className="dashboard-nav">
-            {links.map((link) => (
+            {/* Uncategorized links (e.g., Dashboard usually) */}
+            {topLinks.map((link) => (
               <Link
                 key={link.href}
                 href={link.href}
@@ -80,11 +92,33 @@ export default function DashboardShell({ roleLabel, title, subtitle, links, onLo
                 {link.label}
               </Link>
             ))}
+
+            {/* Categorized links grouped */}
+            {Object.entries(groups).map(([category, catLinks]) => (
+              <div key={category} className="sidebar-group">
+                <p className="sidebar-group-title">{category}</p>
+                {catLinks.map((link) => (
+                  <Link
+                    key={link.href}
+                    href={link.href}
+                    className={`sidebar-link ${pathname === link.href ? "sidebar-link-active" : ""}`}
+                  >
+                    <LinkIcon href={link.href} />
+                    {link.label}
+                  </Link>
+                ))}
+              </div>
+            ))}
           </nav>
 
-          <button className="btn-primary mt-auto w-full" onClick={onLogout}>
-            Cerrar sesion
-          </button>
+          <footer className="dashboard-sidebar-footer">
+            <button className="btn-secondary w-full text-left" onClick={onLogout}>
+              <svg viewBox="0 0 24 24" className="inline-block h-4 w-4 mr-2" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9" />
+              </svg>
+              Cerrar sesión
+            </button>
+          </footer>
         </aside>
 
         <section className="dashboard-content">
@@ -113,6 +147,14 @@ export default function DashboardShell({ roleLabel, title, subtitle, links, onLo
 
             {children}
           </div>
+
+          <button className="dashboard-fab" aria-label="Ayuda del sistema">
+            <svg viewBox="0 0 24 24" className="h-5 w-5 mr-2" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+              <path d="M12 2a2 2 0 0 1 2 2v2a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h4z" />
+              <path d="M4 10h16v10a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V10z" />
+            </svg>
+            Soporte Uni
+          </button>
         </section>
       </section>
     </main>

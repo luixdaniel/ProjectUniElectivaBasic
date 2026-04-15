@@ -224,11 +224,11 @@ export default function UsuarioPqrsPage() {
           const canDelete = ["radicada", "en_revision"].includes(item.estado);
           return (
             <div className="flex flex-wrap gap-2">
-              <button className="btn-ghost" onClick={() => loadDetalle(item.id)}>
+              <button className="btn-ghost !text-xs !py-1.5 !px-3" onClick={() => loadDetalle(item.id)}>
                 Ver
               </button>
               <button
-                className="btn-ghost"
+                className="btn-ghost !text-xs !py-1.5 !px-3"
                 onClick={() => setToDelete(item)}
                 disabled={!canDelete || deletingId === item.id}
               >
@@ -263,9 +263,9 @@ export default function UsuarioPqrsPage() {
       title="Mis PQRS"
       subtitle={user ? `${user.nombre} ${user.apellido} | ${user.correo}` : ""}
       links={[
-        { href: dashboardHref, label: "Inicio usuario" },
-        { href: "/pqrs", label: "Mis PQRS" },
-        { href: "/", label: "Home" },
+        { href: dashboardHref, label: "Mi Resumen", category: "GENERAL" },
+        { href: "/pqrs", label: "Gestión de PQRS", category: "ATENCIÓN" },
+        { href: "/", label: "Volver a inicio", category: "SISTEMA" },
       ]}
       onLogout={handleLogout}
     >

@@ -8,9 +8,7 @@ import { FormEvent, useEffect, useMemo, useState } from "react";
 import DashboardShell from "@/components/layout/DashboardShell";
 import DataTableWrapper from "@/components/ui/DataTableWrapper";
 import EmptyState from "@/components/ui/EmptyState";
-import FilterBar from "@/components/ui/FilterBar";
 import KPIStatCard from "@/components/ui/KPIStatCard";
-import SearchInput from "@/components/ui/SearchInput";
 import StatusBadge from "@/components/ui/StatusBadge";
 import { apiRequest } from "@/lib/api";
 import { clearSession } from "@/lib/auth";
@@ -47,7 +45,7 @@ export default function AdminDashboardPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [actionLoadingId, setActionLoadingId] = useState<number | null>(null);
-  const [searchUser, setSearchUser] = useState("");
+  const [showCreateForm, setShowCreateForm] = useState(false);
 
   useEffect(() => {
     if (!token || !ready) return;
@@ -82,19 +80,6 @@ export default function AdminDashboardPage() {
     return { total, abiertas, respondidas, cerradas, responsables };
   }, [items, users]);
 
-  const usersFiltered = useMemo(() => {
-    return users.filter((item) => {
-      const term = searchUser.toLowerCase();
-      return (
-        item.nombre.toLowerCase().includes(term) ||
-        item.apellido.toLowerCase().includes(term) ||
-        item.usuario.toLowerCase().includes(term) ||
-        item.correo.toLowerCase().includes(term) ||
-        item.rol.toLowerCase().includes(term)
-      );
-    });
-  }, [searchUser, users]);
-
   const userColumns: ColumnDef<AdminUser>[] = [
       {
         header: "Nombre",
@@ -125,7 +110,7 @@ export default function AdminDashboardPage() {
           return (
             <div className="flex flex-wrap gap-2">
               <button
-                className="btn-ghost"
+                className="btn-ghost !text-xs !py-1.5 !px-3"
                 onClick={() => {
                   void onToggleResponsable(rowUser);
                 }}
@@ -134,7 +119,7 @@ export default function AdminDashboardPage() {
                 {rowUser.rol === "responsable" ? "Desactivar" : "Activar"}
               </button>
               <button
-                className="btn-ghost"
+                className="btn-ghost !text-xs !py-1.5 !px-3"
                 onClick={() => {
                   void onResetPassword(rowUser);
                 }}
@@ -270,14 +255,14 @@ export default function AdminDashboardPage() {
       title="Control general PQRS"
       subtitle={user ? `${user.nombre} ${user.apellido} | ${user.correo}` : ""}
       links={[
-        { href: "/dashboard/admin", label: "Inicio admin" },
-        { href: "/dashboard/admin/analytics", label: "Analitica" },
-        { href: "/dashboard/responsable", label: "Vista responsable" },
-        { href: "/", label: "Home" },
+        { href: "/dashboard/admin", label: "Control general", category: "DASHBOARD" },
+        { href: "/dashboard/admin/analytics", label: "Analítica detallada", category: "REPORTES" },
+        { href: "/dashboard/responsable", label: "Panel Responsables", category: "VISORES" },
+        { href: "/", label: "Regresar al sitio", category: "SISTEMA" },
       ]}
       onLogout={handleLogout}
     >
-      <section className="grid gap-4 md:grid-cols-4">
+      <section className="mb-6 grid grid-cols-2 gap-4 md:grid-cols-4">
           <KPIStatCard label="Total" value={metrics.total} />
           <KPIStatCard label="Abiertas" value={metrics.abiertas} />
           <KPIStatCard label="Respondidas" value={metrics.respondidas} />
@@ -285,43 +270,61 @@ export default function AdminDashboardPage() {
       </section>
 
       <section className="card p-6">
-          <h2 className="text-xl font-semibold">Gestion de responsables</h2>
-          <p className="muted mt-1 text-sm">Responsables actuales: {metrics.responsables}</p>
-
-          <form className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2" onSubmit={onCreateResponsable}>
+          <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
-              <label className="mb-1 block text-sm font-medium">Nombre</label>
-              <input className="input" value={nombre} onChange={(e) => setNombre(e.target.value)} required />
+              <h2 className="text-xl font-semibold">Gestion de responsables</h2>
+              <p className="muted mt-1 text-sm">Responsables actuales: {metrics.responsables}</p>
             </div>
-            <div>
-              <label className="mb-1 block text-sm font-medium">Apellido</label>
-              <input className="input" value={apellido} onChange={(e) => setApellido(e.target.value)} required />
-            </div>
-            <div>
-              <label className="mb-1 block text-sm font-medium">Cedula</label>
-              <input className="input" value={cedula} onChange={(e) => setCedula(e.target.value)} required />
-            </div>
-            <div>
-              <label className="mb-1 block text-sm font-medium">Edad</label>
-              <input className="input" type="number" min={18} max={100} value={edad} onChange={(e) => setEdad(Number(e.target.value))} required />
-            </div>
-            <div>
-              <label className="mb-1 block text-sm font-medium">Usuario</label>
-              <input className="input" value={usuarioNew} onChange={(e) => setUsuarioNew(e.target.value)} required />
-            </div>
-            <div>
-              <label className="mb-1 block text-sm font-medium">Correo</label>
-              <input className="input" type="email" value={correo} onChange={(e) => setCorreo(e.target.value)} required />
-            </div>
-            <div className="md:col-span-2">
-              <label className="mb-1 block text-sm font-medium">Contrasena temporal</label>
-              <input className="input" type="password" value={contrasena} onChange={(e) => setContrasena(e.target.value)} required />
-            </div>
-
-            <button className="btn-primary md:col-span-2" type="submit" disabled={saving}>
-              {saving ? "Creando..." : "Crear responsable"}
+            <button
+              className="btn-primary"
+              type="button"
+              onClick={() => setShowCreateForm((prev) => !prev)}
+            >
+              {showCreateForm ? "Ocultar formulario" : "Crear responsable"}
             </button>
-          </form>
+          </div>
+
+          {showCreateForm ? (
+            <form className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2" onSubmit={onCreateResponsable}>
+              <div>
+                <label className="mb-1 block text-sm font-medium">Nombre</label>
+                <input className="input" value={nombre} onChange={(e) => setNombre(e.target.value)} required />
+              </div>
+              <div>
+                <label className="mb-1 block text-sm font-medium">Apellido</label>
+                <input className="input" value={apellido} onChange={(e) => setApellido(e.target.value)} required />
+              </div>
+              <div>
+                <label className="mb-1 block text-sm font-medium">Cedula</label>
+                <input className="input" value={cedula} onChange={(e) => setCedula(e.target.value)} required />
+              </div>
+              <div>
+                <label className="mb-1 block text-sm font-medium">Edad</label>
+                <input className="input" type="number" min={18} max={100} value={edad} onChange={(e) => setEdad(Number(e.target.value))} required />
+              </div>
+              <div>
+                <label className="mb-1 block text-sm font-medium">Usuario</label>
+                <input className="input" value={usuarioNew} onChange={(e) => setUsuarioNew(e.target.value)} required />
+              </div>
+              <div>
+                <label className="mb-1 block text-sm font-medium">Correo</label>
+                <input className="input" type="email" value={correo} onChange={(e) => setCorreo(e.target.value)} required />
+              </div>
+              <div className="md:col-span-2">
+                <label className="mb-1 block text-sm font-medium">Contrasena temporal</label>
+                <input className="input" type="password" value={contrasena} onChange={(e) => setContrasena(e.target.value)} required />
+              </div>
+
+              <div className="md:col-span-2 flex flex-wrap gap-2 pt-2">
+                <button className="btn-primary" type="submit" disabled={saving}>
+                  {saving ? "Creando..." : "Guardar responsable"}
+                </button>
+                <button className="btn-ghost" type="button" onClick={() => setShowCreateForm(false)}>
+                  Cancelar
+                </button>
+              </div>
+            </form>
+          ) : null}
 
           {success ? <p className="mt-4 rounded-md bg-emerald-100 px-3 py-2 text-sm text-emerald-800">{success}</p> : null}
           {error ? <p className="error-text mt-4">{error}</p> : null}
@@ -331,22 +334,13 @@ export default function AdminDashboardPage() {
           <h2 className="text-xl font-semibold">Usuarios y roles</h2>
           <p className="muted mt-1 text-sm">Tabla administrativa con busqueda y paginacion.</p>
 
-          <FilterBar>
-            <SearchInput value={searchUser} onChange={setSearchUser} placeholder="Buscar por nombre, correo, usuario o rol" />
-            <div />
-            <div />
-            <div className="flex items-center">
-              <p className="muted text-sm">Responsables activos: {metrics.responsables}</p>
-            </div>
-          </FilterBar>
-
-          {usersFiltered.length === 0 ? (
+          {users.length === 0 ? (
             <div className="mt-4">
-              <EmptyState title="Sin usuarios para mostrar" subtitle="Ajusta el filtro de busqueda." />
+              <EmptyState title="Sin usuarios para mostrar" subtitle="No hay registros creados." />
             </div>
           ) : (
             <div className="mt-4">
-              <DataTableWrapper data={usersFiltered} columns={userColumns} title="Listado de usuarios" searchPlaceholder="Buscar en la tabla" />
+              <DataTableWrapper data={users} columns={userColumns} title="Listado de usuarios" searchPlaceholder="Buscar por nombre, correo o rol..." />
             </div>
           )}
       </section>

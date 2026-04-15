@@ -181,7 +181,7 @@ export default function ResponsablePage() {
         id: "accion",
         enableSorting: false,
         cell: ({ row }) => (
-          <button className="btn-ghost" onClick={() => loadDetalle(row.original.id)}>
+          <button className="btn-ghost !text-xs !py-1.5 !px-3" onClick={() => loadDetalle(row.original.id)}>
             Gestionar
           </button>
         ),
@@ -206,9 +206,9 @@ export default function ResponsablePage() {
       title="Bandeja de gestion"
       subtitle={user ? `${user.nombre} ${user.apellido} | rol: ${user.rol}` : ""}
       links={[
-        { href: dashboardHref, label: "Inicio responsable" },
-        { href: "/responsable", label: "PQRS asignadas" },
-        { href: "/", label: "Home" },
+        { href: dashboardHref, label: "Mi Área", category: "GENERAL" },
+        { href: "/responsable", label: "PQRS Asignadas", category: "REVISIÓN" },
+        { href: "/", label: "Volver a inicio", category: "SISTEMA" },
       ]}
       onLogout={handleLogout}
     >

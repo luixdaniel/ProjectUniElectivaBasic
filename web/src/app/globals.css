@@ -325,6 +325,71 @@ body {
   border-color: rgba(129, 140, 248, 0.55);
 }
 
+.sidebar-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  margin-top: 1.25rem;
+}
+
+.sidebar-group-title {
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: rgba(148, 163, 184, 0.65);
+  margin-bottom: 0.2rem;
+  padding-left: 0.45rem;
+  font-weight: 700;
+}
+
+.dashboard-fab {
+  position: fixed;
+  bottom: 2rem;
+  right: 2rem;
+  background: linear-gradient(135deg, #4f46e5, #4338ca);
+  color: white;
+  padding: 0.75rem 1.25rem;
+  border-radius: 9999px;
+  box-shadow: 0 4px 6px -1px rgba(79, 70, 229, 0.4), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.85rem;
+  font-weight: 600;
+  border: 1px solid rgba(129, 140, 248, 0.3);
+  transition: all 0.2s ease;
+  z-index: 50;
+  cursor: pointer;
+}
+
+.dashboard-fab:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 12px -2px rgba(79, 70, 229, 0.6), 0 3px 6px -2px rgba(0, 0, 0, 0.1);
+}
+
+.dashboard-sidebar-footer {
+  margin-top: auto;
+  border-top: 1px solid rgba(148, 163, 184, 0.15);
+  padding-top: 1rem;
+}
+
+.dashboard-sidebar-footer .btn-secondary {
+  color: #cbd5e1;
+  background: rgba(30, 41, 59, 0.5);
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.8rem;
+  font-weight: 600;
+  width: 100%;
+}
+
+.dashboard-sidebar-footer .btn-secondary:hover {
+  background: rgba(220, 38, 38, 0.1);
+  color: #fca5a5;
+  border-color: rgba(239, 68, 68, 0.3);
+}
+
 @media (max-width: 980px) {
   .dashboard-grid-wide {
     grid-template-columns: 1fr;
@@ -356,3 +421,5 @@ body {
     text-align: left;
   }
 }
+
+.card + .card { margin-top: 1.5rem; }
