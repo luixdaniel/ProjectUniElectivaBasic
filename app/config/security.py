@@ -31,7 +31,7 @@ def hash_password(password: str) -> str:
 
 
 def verify_password(password: str, stored_password: str) -> bool:
-    # Soporta contraseñas legacy en texto plano para no romper registros existentes.
+    
     if not stored_password.startswith("pbkdf2_sha256$"):
         return hmac.compare_digest(password, stored_password)
 
