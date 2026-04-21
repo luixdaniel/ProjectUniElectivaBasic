@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ReactNode } from "react";
+import { ReactNode, useEffect, useRef, useState } from "react";
 
 type SidebarLink = {
   href: string;
@@ -15,6 +15,7 @@ type DashboardShellProps = {
   title: string;
   subtitle?: string;
   links: SidebarLink[];
+  profileMenuItems?: SidebarLink[];
   onLogout: () => void;
   children: ReactNode;
 };
@@ -53,8 +54,10 @@ function LinkIcon({ href }: { href: string }) {
   );
 }
 
-export default function DashboardShell({ roleLabel, title, subtitle, links, onLogout, children }: DashboardShellProps) {
+export default function DashboardShell({ roleLabel, title, subtitle, links, profileMenuItems = [], onLogout, children }: DashboardShellProps) {
   const pathname = usePathname();
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement | null>(null);
   const displayName = (subtitle?.split("|")[0] || title).trim();
   const avatarLetter = (displayName[0] || "U").toUpperCase();
 
@@ -67,6 +70,18 @@ export default function DashboardShell({ roleLabel, title, subtitle, links, onLo
       acc[cat].push(link);
       return acc;
     }, {} as Record<string, SidebarLink[]>);
+
+  useEffect(() => {
+    function handleOutsideClick(event: MouseEvent) {
+      if (!menuRef.current) return;
+      if (!menuRef.current.contains(event.target as Node)) {
+        setMenuOpen(false);
+      }
+    }
+
+    document.addEventListener("mousedown", handleOutsideClick);
+    return () => document.removeEventListener("mousedown", handleOutsideClick);
+  }, []);
 
   return (
     <main className="dashboard-workspace">
@@ -135,7 +150,41 @@ export default function DashboardShell({ roleLabel, title, subtitle, links, onLo
                 <p className="dashboard-user-role">{roleLabel}</p>
                 <p className="dashboard-user-name">{displayName}</p>
               </div>
-              <span className="dashboard-avatar" aria-hidden="true">{avatarLetter}</span>
+              <div className="dashboard-user-menu" ref={menuRef}>
+                <button
+                  className="dashboard-avatar"
+                  aria-label="Abrir menú de usuario"
+                  type="button"
+                  onClick={() => setMenuOpen((prev) => !prev)}
+                >
+                  {avatarLetter}
+                </button>
+
+                {menuOpen ? (
+                  <div className="dashboard-user-dropdown">
+                    {profileMenuItems.map((item) => (
+                      <Link
+                        key={item.href}
+                        href={item.href}
+                        className="dashboard-user-dropdown-item"
+                        onClick={() => setMenuOpen(false)}
+                      >
+                        {item.label}
+                      </Link>
+                    ))}
+                    <button
+                      className="dashboard-user-dropdown-item dashboard-user-dropdown-danger"
+                      type="button"
+                      onClick={() => {
+                        setMenuOpen(false);
+                        onLogout();
+                      }}
+                    >
+                      Cerrar sesión
+                    </button>
+                  </div>
+                ) : null}
+              </div>
             </div>
           </header>
 

@@ -244,6 +244,45 @@ body {
   color: #eef2ff;
   font-size: 0.85rem;
   font-weight: 700;
+  border: 0;
+  cursor: pointer;
+}
+
+.dashboard-user-menu {
+  position: relative;
+}
+
+.dashboard-user-dropdown {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 0.55rem);
+  z-index: 40;
+  min-width: 185px;
+  border-radius: 10px;
+  border: 1px solid rgba(148, 163, 184, 0.32);
+  background: #111827;
+  box-shadow: 0 16px 30px rgba(2, 6, 23, 0.35);
+  overflow: hidden;
+}
+
+.dashboard-user-dropdown-item {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 0.6rem 0.75rem;
+  color: #dbe7ff;
+  background: transparent;
+  border: 0;
+  font-size: 0.85rem;
+}
+
+.dashboard-user-dropdown-item:hover {
+  background: rgba(79, 70, 229, 0.2);
+}
+
+.dashboard-user-dropdown-danger {
+  color: #fecaca;
+  border-top: 1px solid rgba(148, 163, 184, 0.22);
 }
 
 .dashboard-main {

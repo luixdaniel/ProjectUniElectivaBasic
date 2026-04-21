@@ -10,7 +10,7 @@ import DataTableWrapper from "@/components/ui/DataTableWrapper";
 import EmptyState from "@/components/ui/EmptyState";
 import KPIStatCard from "@/components/ui/KPIStatCard";
 import StatusBadge from "@/components/ui/StatusBadge";
-import { apiRequest } from "@/lib/api";
+import { API_URL, apiRequest } from "@/lib/api";
 import { clearSession } from "@/lib/auth";
 import { PqrsItem } from "@/lib/pqrs-types";
 import { useRoleGuard } from "@/lib/role-guard";
@@ -46,6 +46,7 @@ export default function AdminDashboardPage() {
   const [saving, setSaving] = useState(false);
   const [actionLoadingId, setActionLoadingId] = useState<number | null>(null);
   const [showCreateForm, setShowCreateForm] = useState(false);
+  const [downloadingExcel, setDownloadingExcel] = useState(false);
 
   useEffect(() => {
     if (!token || !ready) return;
@@ -126,6 +127,15 @@ export default function AdminDashboardPage() {
                 disabled={isAdminRow || isLoading}
               >
                 Reset clave
+              </button>
+              <button
+                className="btn-ghost !text-xs !py-1.5 !px-3"
+                onClick={() => {
+                  void onDeleteUser(rowUser);
+                }}
+                disabled={isAdminRow || isLoading}
+              >
+                Eliminar
               </button>
             </div>
           );
@@ -234,6 +244,68 @@ export default function AdminDashboardPage() {
     }
   }
 
+  async function onDeleteUser(targetUser: AdminUser) {
+    if (!token) return;
+    if (targetUser.rol === "admin") return;
+
+    const confirmed = window.confirm(`¿Eliminar el usuario ${targetUser.usuario}? Esta acción también elimina sus PQRS creadas.`);
+    if (!confirmed) return;
+
+    setActionLoadingId(targetUser.id);
+    setError("");
+    setSuccess("");
+    try {
+      await apiRequest<{ resultado: string }>(`/admin/users/${targetUser.id}`, {
+        method: "DELETE",
+        token,
+      });
+      setSuccess("Usuario eliminado correctamente");
+      await refreshUsers();
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "No se pudo eliminar el usuario";
+      setError(message);
+    } finally {
+      setActionLoadingId(null);
+    }
+  }
+
+  async function onDownloadExcelPowerBI() {
+    if (!token) return;
+
+    setDownloadingExcel(true);
+    setError("");
+    setSuccess("");
+    try {
+      const response = await fetch(`${API_URL}/pqrs/export/powerbi`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        cache: "no-store",
+      });
+
+      if (!response.ok) {
+        throw new Error(`Error ${response.status}: No se pudo descargar el archivo`);
+      }
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `pqrs_powerbi_${new Date().toISOString().slice(0, 10)}.xlsx`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+
+      setSuccess("Excel descargado correctamente");
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "No se pudo descargar el Excel";
+      setError(message);
+    } finally {
+      setDownloadingExcel(false);
+    }
+  }
+
   function handleLogout() {
     clearSession();
     router.replace("/");
@@ -267,6 +339,26 @@ export default function AdminDashboardPage() {
           <KPIStatCard label="Abiertas" value={metrics.abiertas} />
           <KPIStatCard label="Respondidas" value={metrics.respondidas} />
           <KPIStatCard label="Cerradas/Rechazadas" value={metrics.cerradas} />
+      </section>
+
+      <section className="mb-6 card p-6">
+        <div className="flex flex-col gap-4">
+          <div>
+            <h2 className="text-xl font-semibold">Exportar datos para Power BI</h2>
+            <p className="muted mt-1 text-sm">Descarga todos los datos de PQRS en formato Excel para importar a Power BI</p>
+          </div>
+          <button
+            className="btn-primary w-fit"
+            type="button"
+            onClick={onDownloadExcelPowerBI}
+            disabled={downloadingExcel}
+          >
+            {downloadingExcel ? "Descargando..." : "📊 Descargar Excel para Power BI"}
+          </button>
+          {success && success.includes("Excel") && (
+            <p className="rounded bg-green-50 p-3 text-sm text-green-700">{success}</p>
+          )}
+        </div>
       </section>
 
       <section className="card p-6">

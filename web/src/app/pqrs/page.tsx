@@ -264,8 +264,13 @@ export default function UsuarioPqrsPage() {
       subtitle={user ? `${user.nombre} ${user.apellido} | ${user.correo}` : ""}
       links={[
         { href: dashboardHref, label: "Mi Resumen", category: "GENERAL" },
+        { href: "/dashboard/usuario/perfil", label: "Mi Perfil", category: "GENERAL" },
         { href: "/pqrs", label: "Gestión de PQRS", category: "ATENCIÓN" },
         { href: "/", label: "Volver a inicio", category: "SISTEMA" },
+      ]}
+      profileMenuItems={[
+        { href: "/dashboard/usuario/perfil", label: "Mi perfil" },
+        { href: "/pqrs", label: "Mis PQRS" },
       ]}
       onLogout={handleLogout}
     >

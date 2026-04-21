@@ -6,7 +6,8 @@ import DashboardShell from "@/components/layout/DashboardShell";
 import { clearSession } from "@/lib/auth";
 import { useRoleGuard } from "@/lib/role-guard";
 
-const POWER_BI_EMBED_URL = process.env.NEXT_PUBLIC_POWERBI_EMBED_URL ?? "";
+const POWER_BI_EMBED_URL =
+  "https://app.powerbi.com/reportEmbed?reportId=3168476a-dd5f-4fea-94e7-68d3f7cc107d&autoAuth=true&ctid=740be6bd-fd36-470e-94d9-0f0c777fadb9";
 const POWER_BI_REPORT_URL = process.env.NEXT_PUBLIC_POWERBI_REPORT_URL ?? "";
 
 export default function AdminAnalyticsPage() {
@@ -43,7 +44,7 @@ export default function AdminAnalyticsPage() {
       <section className="card p-6">
         <h2 className="text-xl font-semibold">Tablero ejecutivo</h2>
         <p className="muted mt-1 text-sm">
-          Pega tu enlace de embed en la variable NEXT_PUBLIC_POWERBI_EMBED_URL para mostrar el reporte.
+          Reporte de Power BI embebido para visualización en tiempo real.
         </p>
 
         {POWER_BI_EMBED_URL ? (

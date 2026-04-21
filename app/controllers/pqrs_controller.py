@@ -3,6 +3,8 @@ from datetime import datetime
 from uuid import uuid4
 from fastapi import HTTPException
 from fastapi.encoders import jsonable_encoder
+import pandas as pd
+import io
 
 from config.db_config import get_db_connection
 from models.pqrs_model import PqrsCreate, PqrsEstadoUpdate
@@ -502,6 +504,176 @@ class PqrsController:
             if conn:
                 conn.rollback()
             raise HTTPException(status_code=500, detail="Error de base de datos al eliminar PQRS")
+        finally:
+            if cursor:
+                cursor.close()
+            if conn:
+                conn.close()
+
+    def export_to_excel_for_powerbi(self):
+        """Exporta todos los datos necesarios para Power BI en un archivo Excel con múltiples hojas"""
+        conn = None
+        cursor = None
+        try:
+            conn = get_db_connection()
+            cursor = conn.cursor()
+
+            # Obtener datos de PQRS con información relacionada
+            cursor.execute(
+                """
+                SELECT
+                    p.id,
+                    p.numero_radicado,
+                    p.tipo,
+                    p.estado,
+                    p.prioridad,
+                    p.descripcion,
+                    p.respuesta,
+                    p.fecha_creacion,
+                    p.fecha_actualizacion,
+                    u.nombre as usuario_nombre,
+                    u.apellido as usuario_apellido,
+                    u.correo as usuario_correo,
+                    c.nombre as categoria_nombre,
+                    d.nombre as dependencia_nombre,
+                    COALESCE(r.nombre || ' ' || r.apellido, 'Sin asignar') as responsable_nombre,
+                    EXTRACT(DAY FROM (p.fecha_actualizacion - p.fecha_creacion)) as dias_transcurridos,
+                    CASE 
+                        WHEN p.tipo = 'P' THEN 'Petición'
+                        WHEN p.tipo = 'Q' THEN 'Queja'
+                        WHEN p.tipo = 'R' THEN 'Reclamo'
+                        WHEN p.tipo = 'S' THEN 'Sugerencia'
+                        ELSE p.tipo
+                    END as tipo_nombre
+                FROM pqrs p
+                JOIN usuarios u ON u.id = p.usuario_id
+                JOIN categorias c ON c.id = p.categoria_id
+                JOIN dependencias d ON d.id = p.dependencia_id
+                LEFT JOIN usuarios r ON r.id = p.responsable_id
+                ORDER BY p.fecha_creacion DESC
+                """
+            )
+            pqrs_data = cursor.fetchall()
+            pqrs_columns = [
+                'ID', 'Número Radicado', 'Tipo', 'Estado', 'Prioridad',
+                'Descripción', 'Respuesta', 'Fecha Creación', 'Fecha Actualización',
+                'Usuario Nombre', 'Usuario Apellido', 'Usuario Correo', 'Categoría',
+                'Dependencia', 'Responsable', 'Días Transcurridos', 'Tipo Nombre'
+            ]
+            
+            # Obtener datos de usuarios
+            cursor.execute(
+                """
+                SELECT
+                    u.id,
+                    u.nombre,
+                    u.apellido,
+                    u.cedula,
+                    u.edad,
+                    u.usuario,
+                    u.correo,
+                    u.rol,
+                    COUNT(DISTINCT CASE WHEN p.estado NOT IN ('cerrada', 'rechazada') THEN p.id END) as pqrs_activas,
+                    COUNT(DISTINCT p.id) as total_pqrs
+                FROM usuarios u
+                LEFT JOIN pqrs p ON p.usuario_id = u.id
+                GROUP BY u.id
+                ORDER BY u.nombre ASC
+                """
+            )
+            usuarios_data = cursor.fetchall()
+            usuarios_columns = ['ID', 'Nombre', 'Apellido', 'Cédula', 'Edad', 'Usuario', 'Correo', 'Rol', 'PQRS Activas', 'Total PQRS']
+            
+            # Obtener datos de categorías
+            cursor.execute(
+                """
+                SELECT
+                    c.id,
+                    c.nombre,
+                    c.descripcion,
+                    COUNT(p.id) as total_pqrs,
+                    COUNT(CASE WHEN p.estado NOT IN ('cerrada', 'rechazada') THEN 1 END) as pqrs_activas
+                FROM categorias c
+                LEFT JOIN pqrs p ON p.categoria_id = c.id
+                GROUP BY c.id
+                ORDER BY c.nombre ASC
+                """
+            )
+            categorias_data = cursor.fetchall()
+            categorias_columns = ['ID', 'Nombre', 'Descripción', 'Total PQRS', 'PQRS Activas']
+            
+            # Obtener datos de dependencias
+            cursor.execute(
+                """
+                SELECT
+                    d.id,
+                    d.nombre,
+                    d.descripcion,
+                    COUNT(p.id) as total_pqrs,
+                    COUNT(CASE WHEN p.estado NOT IN ('cerrada', 'rechazada') THEN 1 END) as pqrs_activas
+                FROM dependencias d
+                LEFT JOIN pqrs p ON p.dependencia_id = d.id
+                GROUP BY d.id
+                ORDER BY d.nombre ASC
+                """
+            )
+            dependencias_data = cursor.fetchall()
+            dependencias_columns = ['ID', 'Nombre', 'Descripción', 'Total PQRS', 'PQRS Activas']
+            
+            # Obtener historial de PQRS
+            cursor.execute(
+                """
+                SELECT
+                    ph.id,
+                    ph.pqrs_id,
+                    p.numero_radicado,
+                    ph.estado_anterior,
+                    ph.estado_nuevo,
+                    ph.usuario_accion,
+                    ph.comentario,
+                    ph.fecha_evento
+                FROM pqrs_historial ph
+                JOIN pqrs p ON p.id = ph.pqrs_id
+                ORDER BY ph.fecha_evento DESC
+                """
+            )
+            historial_data = cursor.fetchall()
+            historial_columns = ['ID', 'PQRS ID', 'Número Radicado', 'Estado Anterior', 'Estado Nuevo', 'Usuario Acción', 'Comentario', 'Fecha Evento']
+            
+            # Crear DataFrames
+            df_pqrs = pd.DataFrame(pqrs_data, columns=pqrs_columns)
+            df_usuarios = pd.DataFrame(usuarios_data, columns=usuarios_columns)
+            df_categorias = pd.DataFrame(categorias_data, columns=categorias_columns)
+            df_dependencias = pd.DataFrame(dependencias_data, columns=dependencias_columns)
+            df_historial = pd.DataFrame(historial_data, columns=historial_columns)
+            
+            # Convertir fechas a string para mejor visualización
+            df_pqrs['Fecha Creación'] = pd.to_datetime(df_pqrs['Fecha Creación'], errors='coerce').dt.strftime('%Y-%m-%d %H:%M:%S')
+            df_pqrs['Fecha Actualización'] = pd.to_datetime(df_pqrs['Fecha Actualización'], errors='coerce').dt.strftime('%Y-%m-%d %H:%M:%S')
+            df_historial['Fecha Evento'] = pd.to_datetime(df_historial['Fecha Evento'], errors='coerce').dt.strftime('%Y-%m-%d %H:%M:%S')
+            
+            # Crear archivo Excel en memoria
+            output = io.BytesIO()
+            with pd.ExcelWriter(output, engine='openpyxl') as writer:
+                df_pqrs.to_excel(writer, sheet_name='PQRS', index=False)
+                df_usuarios.to_excel(writer, sheet_name='Usuarios', index=False)
+                df_categorias.to_excel(writer, sheet_name='Categorías', index=False)
+                df_dependencias.to_excel(writer, sheet_name='Dependencias', index=False)
+                df_historial.to_excel(writer, sheet_name='Historial', index=False)
+            
+            output.seek(0)
+            return output
+            
+        except psycopg2.Error as err:
+            print(err)
+            if conn:
+                conn.rollback()
+            raise HTTPException(status_code=500, detail="Error de base de datos al generar Excel")
+        except Exception as err:
+            print(err)
+            if conn:
+                conn.rollback()
+            raise HTTPException(status_code=500, detail="Error al generar el archivo Excel")
         finally:
             if cursor:
                 cursor.close()
