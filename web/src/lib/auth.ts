@@ -17,16 +17,18 @@ const TOKEN_KEY = "pqrs_token";
 const USER_KEY = "pqrs_user";
 
 export function saveSession(session: AuthSession) {
-  localStorage.setItem(TOKEN_KEY, session.access_token);
-  localStorage.setItem(USER_KEY, JSON.stringify(session.user));
+  sessionStorage.setItem(TOKEN_KEY, session.access_token);
+  sessionStorage.setItem(USER_KEY, JSON.stringify(session.user));
 }
 
 export function getToken() {
-  return localStorage.getItem(TOKEN_KEY);
+  if (typeof window === "undefined") return null;
+  return sessionStorage.getItem(TOKEN_KEY);
 }
 
 export function getUser(): AuthUser | null {
-  const raw = localStorage.getItem(USER_KEY);
+  if (typeof window === "undefined") return null;
+  const raw = sessionStorage.getItem(USER_KEY);
   if (!raw) return null;
 
   try {
@@ -37,10 +39,11 @@ export function getUser(): AuthUser | null {
 }
 
 export function updateStoredUser(user: AuthUser) {
-  localStorage.setItem(USER_KEY, JSON.stringify(user));
+  sessionStorage.setItem(USER_KEY, JSON.stringify(user));
 }
 
 export function clearSession() {
-  localStorage.removeItem(TOKEN_KEY);
-  localStorage.removeItem(USER_KEY);
+  if (typeof window === "undefined") return;
+  sessionStorage.removeItem(TOKEN_KEY);
+  sessionStorage.removeItem(USER_KEY);
 }

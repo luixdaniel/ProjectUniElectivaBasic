@@ -38,7 +38,7 @@ export default function UsuarioPqrsPage() {
   const [selected, setSelected] = useState<PqrsItem | null>(null);
   const [historial, setHistorial] = useState<HistorialItem[]>([]);
 
-  const [tipo, setTipo] = useState<PqrsTipo>("P");
+  const [tipo, setTipo] = useState<PqrsTipo>("peticion");
   const [categoriaId, setCategoriaId] = useState<number>(0);
   const [descripcion, setDescripcion] = useState("");
   const [prioridad, setPrioridad] = useState<PqrsPrioridad>("media");
@@ -294,10 +294,11 @@ export default function UsuarioPqrsPage() {
               <div>
                 <label className="mb-1 block text-sm font-medium">Tipo</label>
                 <select className="input" value={tipo} onChange={(e) => setTipo(e.target.value as PqrsTipo)}>
-                  <option value="P">P</option>
-                  <option value="Q">Q</option>
-                  <option value="R">R</option>
-                  <option value="S">S</option>
+                  <option value="peticion">Petición</option>
+                  <option value="queja">Queja</option>
+                  <option value="reclamo">Reclamo</option>
+                  <option value="sugerencia">Sugerencia</option>
+                  <option value="felicitacion">Felicitación</option>
                 </select>
               </div>
 

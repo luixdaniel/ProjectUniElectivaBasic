@@ -3,7 +3,8 @@ from fastapi import HTTPException
 
 from config.db_config import get_db_connection
 from config.security import create_access_token, hash_password, verify_password
-from models.auth_model import LoginRequest, RegisterRequest
+from models.login_request_model import LoginRequest
+from models.register_request_model import RegisterRequest
 
 
 class AuthController:

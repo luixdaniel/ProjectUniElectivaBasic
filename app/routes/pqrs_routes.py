@@ -3,7 +3,8 @@ from fastapi.responses import StreamingResponse
 
 from config.security import require_roles
 from controllers.pqrs_controller import PqrsController
-from models.pqrs_model import PqrsCreate, PqrsEstadoUpdate
+from models.pqrs_create_model import PqrsCreate
+from models.pqrs_estado_update_model import PqrsEstadoUpdate
 
 
 router = APIRouter(prefix="/pqrs", tags=["PQRS"])

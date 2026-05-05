@@ -62,7 +62,7 @@ CREATE TABLE IF NOT EXISTS pqrs (
     id SERIAL PRIMARY KEY,
     numero_radicado VARCHAR(40) NOT NULL UNIQUE,
     usuario_id INTEGER NOT NULL REFERENCES usuarios(id),
-    tipo CHAR(1) NOT NULL CHECK (tipo IN ('P', 'Q', 'R', 'S')),
+    tipo VARCHAR(15) NOT NULL CHECK (tipo IN ('peticion', 'queja', 'reclamo', 'sugerencia', 'felicitacion')),
     categoria_id INTEGER NOT NULL REFERENCES categorias(id),
     dependencia_id INTEGER NOT NULL REFERENCES dependencias(id),
     descripcion TEXT NOT NULL,

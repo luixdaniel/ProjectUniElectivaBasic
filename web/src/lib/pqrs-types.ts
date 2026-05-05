@@ -1,4 +1,4 @@
-export type PqrsTipo = "P" | "Q" | "R" | "S";
+export type PqrsTipo = "peticion" | "queja" | "reclamo" | "sugerencia" | "felicitacion";
 
 export type PqrsPrioridad = "baja" | "media" | "alta";
 
@@ -14,6 +14,7 @@ export type PqrsItem = {
   fecha_actualizacion?: string;
   categoria?: { id: number; nombre: string };
   usuario?: { id: number; nombre: string; apellido: string; correo?: string };
+  responsable?: { id: number; nombre: string; apellido: string; correo?: string } | null;
 };
 
 export type HistorialItem = {

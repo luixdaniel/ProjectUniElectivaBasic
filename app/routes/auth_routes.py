@@ -2,7 +2,9 @@ from fastapi import APIRouter, Depends
 
 from config.security import get_current_user, require_roles
 from controllers.auth_controller import AuthController
-from models.auth_model import LoginRequest, RegisterRequest, TokenResponse
+from models.login_request_model import LoginRequest
+from models.register_request_model import RegisterRequest
+from models.token_response_model import TokenResponse
 
 
 router = APIRouter(prefix="/auth", tags=["Auth"])

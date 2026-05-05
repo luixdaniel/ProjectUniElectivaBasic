@@ -2,10 +2,8 @@ import re
 from pydantic import BaseModel, EmailStr, field_validator
 from typing import Literal
 
-
 NAME_REGEX = re.compile(r"^[A-Za-zÁÉÍÓÚáéíóúÑñ ]+$")
 DOC_CC_TI_REGEX = re.compile(r"^[0-9]{6,12}$")
-
 
 class RegisterRequest(BaseModel):
     nombre: str
@@ -53,14 +51,3 @@ class RegisterRequest(BaseModel):
     @classmethod
     def normalize_email(cls, value: EmailStr):
         return value.strip().lower()
-
-
-class LoginRequest(BaseModel):
-    correo: EmailStr
-    contrasena: str
-
-
-class TokenResponse(BaseModel):
-    access_token: str
-    token_type: str
-    user: dict

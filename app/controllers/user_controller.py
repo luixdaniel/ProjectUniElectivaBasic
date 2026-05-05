@@ -2,7 +2,8 @@ import psycopg2
 from fastapi import HTTPException
 from config.db_config import get_db_connection
 from config.security import hash_password
-from models.user_model import User, UserProfileUpdate
+from models.user_base_model import User
+from models.user_profile_update_model import UserProfileUpdate
 from fastapi.encoders import jsonable_encoder
 
 class UserController:

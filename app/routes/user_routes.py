@@ -1,7 +1,10 @@
 from fastapi import APIRouter, Depends
 from config.security import get_current_user, require_roles
 from controllers.user_controller import *
-from models.user_model import User, UserPasswordReset, UserProfileUpdate, UserRoleToggle
+from models.user_base_model import User
+from models.user_password_reset_model import UserPasswordReset
+from models.user_profile_update_model import UserProfileUpdate
+from models.user_role_toggle_model import UserRoleToggle
 
 router = APIRouter()
 

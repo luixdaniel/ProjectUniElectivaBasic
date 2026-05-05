@@ -138,11 +138,13 @@ export default function ResponsablePage() {
 
   const filteredRows = useMemo(() => {
     return asignadas.filter((item) => {
+      const respName = item.responsable ? `${item.responsable.nombre} ${item.responsable.apellido}`.toLowerCase() : "";
       const bySearch =
         item.numero_radicado.toLowerCase().includes(search.toLowerCase()) ||
         item.usuario.nombre.toLowerCase().includes(search.toLowerCase()) ||
         item.usuario.apellido.toLowerCase().includes(search.toLowerCase()) ||
-        item.categoria.nombre.toLowerCase().includes(search.toLowerCase());
+        item.categoria.nombre.toLowerCase().includes(search.toLowerCase()) ||
+        respName.includes(search.toLowerCase());
       const byEstado = estadoFilter === "todos" || item.estado === estadoFilter;
       const byPrioridad = prioridadFilter === "todas" || item.prioridad === prioridadFilter;
       return bySearch && byEstado && byPrioridad;
@@ -171,8 +173,14 @@ export default function ResponsablePage() {
         accessorKey: "estado",
         cell: ({ row }) => <StatusBadge status={row.original.estado} />,
       },
-      {
-        header: "Prioridad",
+      {        header: "Responsable",
+        id: "responsable",
+        cell: ({ row }) =>
+          row.original.responsable
+            ? `${row.original.responsable.nombre} ${row.original.responsable.apellido}`
+            : <span className="text-slate-500 italic">Sin asignar</span>,
+      },
+      {        header: "Prioridad",
         accessorKey: "prioridad",
         cell: ({ row }) => <PriorityBadge priority={row.original.prioridad} />,
       },

@@ -7,7 +7,8 @@ import pandas as pd
 import io
 
 from config.db_config import get_db_connection
-from models.pqrs_model import PqrsCreate, PqrsEstadoUpdate
+from models.pqrs_create_model import PqrsCreate
+from models.pqrs_estado_update_model import PqrsEstadoUpdate
 
 
 class PqrsController:
@@ -539,10 +540,11 @@ class PqrsController:
                     COALESCE(r.nombre || ' ' || r.apellido, 'Sin asignar') as responsable_nombre,
                     EXTRACT(DAY FROM (p.fecha_actualizacion - p.fecha_creacion)) as dias_transcurridos,
                     CASE 
-                        WHEN p.tipo = 'P' THEN 'Petición'
-                        WHEN p.tipo = 'Q' THEN 'Queja'
-                        WHEN p.tipo = 'R' THEN 'Reclamo'
-                        WHEN p.tipo = 'S' THEN 'Sugerencia'
+                        WHEN p.tipo = 'peticion' THEN 'Petición'
+                        WHEN p.tipo = 'queja' THEN 'Queja'
+                        WHEN p.tipo = 'reclamo' THEN 'Reclamo'
+                        WHEN p.tipo = 'sugerencia' THEN 'Sugerencia'
+                        WHEN p.tipo = 'felicitacion' THEN 'Felicitación'
                         ELSE p.tipo
                     END as tipo_nombre
                 FROM pqrs p
