@@ -1,0 +1,65 @@
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h2 className="text-xl font-semibold">Crear PQRS</h2>
+              <p className="muted mt-1 text-sm">Radica peticion, queja, reclamo o sugerencia.</p>
+            </div>
+            <button
+              className="btn-primary"
+              type="button"
+              onClick={() => setShowCreateForm((prev) => !prev)}
+            >
+              {showCreateForm ? "Ocultar formulario" : "Crear PQRS"}
+            </button>
+          </div>
+
+          {showCreateForm ? (
+            <form className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2" onSubmit={onCreatePqrs}>
+              <div>
+                <label className="mb-1 block text-sm font-medium">Tipo</label>
+                <select className="input" value={tipo} onChange={(e) => setTipo(e.target.value as PqrsTipo)}>
+                  <option value="peticion">Petición</option>
+                  <option value="queja">Queja</option>
+                  <option value="reclamo">Reclamo</option>
+                  <option value="sugerencia">Sugerencia</option>
+                  <option value="felicitacion">Felicitación</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="mb-1 block text-sm font-medium">Categoria</label>
+                <select className="input" value={categoriaId || ""} onChange={(e) => setCategoriaId(Number(e.target.value))}>
+                  {categorias.map((categoria) => (
+                    <option key={categoria.id} value={categoria.id}>
+                      {categoria.nombre}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="mb-1 block text-sm font-medium">Prioridad</label>
+                <select className="input" value={prioridad} onChange={(e) => setPrioridad(e.target.value as PqrsPrioridad)}>
+                  <option value="baja">baja</option>
+                  <option value="media">media</option>
+                  <option value="alta">alta</option>
+                </select>
+              </div>
+
+              <div className="md:col-span-2">
+                <label className="mb-1 block text-sm font-medium">Descripcion</label>
+                <textarea className="input min-h-24" value={descripcion} onChange={(e) => setDescripcion(e.target.value)} required />
+              </div>
+
+              <div className="md:col-span-2 flex flex-wrap gap-2">
+                <button className="btn-primary" type="submit" disabled={saving || loading}>
+                  {saving ? "Guardando..." : "Guardar PQRS"}
+                </button>
+                <button className="btn-ghost" type="button" onClick={() => setShowCreateForm(false)}>
+                  Cancelar
+                </button>
+              </div>
+            </form>
+          ) : null}
+      </section>
+
+      <section className="card p-6">

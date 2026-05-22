@@ -681,3 +681,74 @@ class PqrsController:
                 cursor.close()
             if conn:
                 conn.close()
+
+    def calcular_alerta_saturacion(self):
+        """Calcula el día crítico de saturación del sistema basado en PQRS activas usando el método de Falsa Posición."""
+        conn = None
+        cursor = None
+        try:
+            conn = get_db_connection()
+            cursor = conn.cursor()
+            
+            # Obtener cantidad de pqrs activas para usar en la fórmula matemática como variable (ej. factor de carga)
+            cursor.execute("SELECT COUNT(id) FROM pqrs WHERE estado NOT IN ('cerrada', 'rechazada')")
+            pqrs_activas = cursor.fetchone()[0]
+            
+            # Límite crítico de "insatisfacción" para que el sistema colapse (ej. empieza en 100)
+            limite_critico = 100
+            # Si hay muchas PQRS, el factor de carga aumenta y hace que crezca más rápido la función (exponencial)
+            factor_carga = 0.3 + (pqrs_activas * 0.05)
+            
+            import math
+            # Nuestra función de costo f(x): f(x) = exp(factor * x) + 5x - limite
+            def funcion_costo(dias):
+                try:
+                    return math.exp(factor_carga * dias) + 5 * dias - limite_critico
+                except OverflowError:
+                    return float('inf') # Si el día es muy alto
+
+            # Falsa posición necesita un rango [a, b] donde f(a)*f(b) < 0.
+            # Rango: de 0 días a 30 días.
+            from utils.numerical_methods import falsa_posicion
+
+            a = 0
+            b = 30
+            
+            # Validamos si existe raíz en el intervalo
+            if funcion_costo(a) * funcion_costo(b) >= 0:
+                return {
+                    "resultado": {
+                        "status": "ok",
+                        "mensaje": "El sistema está estable y no alcanzará su límite crítico en los próximos 30 días.",
+                        "pqrs_activas": pqrs_activas,
+                        "dia_estimado": None
+                    }
+                }
+                
+            dia_critico = falsa_posicion(funcion_costo, a, b)
+            
+            if dia_critico <= 5:
+                status = "danger"
+            elif dia_critico <= 15:
+                status = "warning"
+            else:
+                status = "ok"
+                
+            return {
+                "resultado": {
+                    "status": status,
+                    "mensaje": f"Alerta predictiva: El sistema alcanzará un punto crítico de saturación en aprox. {dia_critico:.2f} días.",
+                    "pqrs_activas": pqrs_activas,
+                    "dia_estimado": round(dia_critico, 2),
+                    "formula": f"f(x) = e^({factor_carga:.2f} * x) + 5x - {limite_critico}"
+                }
+            }
+                
+        except Exception as err:
+            print(err)
+            raise HTTPException(status_code=500, detail="Error al calcular la predicción numérica")
+        finally:
+            if cursor:
+                cursor.close()
+            if conn:
+                conn.close()

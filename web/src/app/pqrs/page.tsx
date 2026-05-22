@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 
 import DashboardShell from "@/components/layout/DashboardShell";
+import Modal from "@/components/ui/Modal";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
 import DataTableWrapper from "@/components/ui/DataTableWrapper";
 import EmptyState from "@/components/ui/EmptyState";
@@ -277,20 +278,20 @@ export default function UsuarioPqrsPage() {
       <section className="card p-6">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
-              <h2 className="text-xl font-semibold">Crear PQRS</h2>
-              <p className="muted mt-1 text-sm">Radica peticion, queja, reclamo o sugerencia.</p>
+              <h2 className="text-xl font-semibold">Mis PQRS</h2>
+              <p className="muted mt-1 text-sm">Gestiona tus peticiones, quejas, reclamos y sugerencias.</p>
             </div>
             <button
               className="btn-primary"
               type="button"
-              onClick={() => setShowCreateForm((prev) => !prev)}
+              onClick={() => setShowCreateForm(true)}
             >
-              {showCreateForm ? "Ocultar formulario" : "Crear PQRS"}
+              Crear PQRS
             </button>
           </div>
 
-          {showCreateForm ? (
-            <form className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2" onSubmit={onCreatePqrs}>
+          <Modal isOpen={showCreateForm} onClose={() => setShowCreateForm(false)} title="Crear Nueva PQRS">
+            <form className="mt-2 grid grid-cols-1 gap-4 md:grid-cols-2" onSubmit={onCreatePqrs}>
               <div>
                 <label className="mb-1 block text-sm font-medium">Tipo</label>
                 <select className="input" value={tipo} onChange={(e) => setTipo(e.target.value as PqrsTipo)}>
@@ -327,16 +328,16 @@ export default function UsuarioPqrsPage() {
                 <textarea className="input min-h-24" value={descripcion} onChange={(e) => setDescripcion(e.target.value)} required />
               </div>
 
-              <div className="md:col-span-2 flex flex-wrap gap-2">
-                <button className="btn-primary" type="submit" disabled={saving || loading}>
-                  {saving ? "Guardando..." : "Guardar PQRS"}
-                </button>
+              <div className="md:col-span-2 flex flex-wrap justify-end gap-2 mt-4">
                 <button className="btn-ghost" type="button" onClick={() => setShowCreateForm(false)}>
                   Cancelar
                 </button>
+                <button className="btn-primary" type="submit" disabled={saving || loading}>
+                  {saving ? "Guardando..." : "Guardar PQRS"}
+                </button>
               </div>
             </form>
-          ) : null}
+          </Modal>
       </section>
 
       <section className="card p-6">

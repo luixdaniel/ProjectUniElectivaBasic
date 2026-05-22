@@ -61,3 +61,8 @@ async def export_powerbi(user=Depends(require_roles(["admin"]))):
         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         headers={"Content-Disposition": "attachment; filename=pqrs_powerbi.xlsx"}
     )
+
+@router.get("/auditoria/predictiva")
+async def alerta_saturacion(user=Depends(require_roles(["admin"]))):
+    """Calcula el punto de equilibrio / alerta predictiva usando Falsa Posición"""
+    return pqrs_controller.calcular_alerta_saturacion()
